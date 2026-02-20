@@ -278,7 +278,7 @@ export default function NewCustomerPage() {
                                     key={cond}
                                     onClick={() => toggleCondition(cond)}
                                     style={{
-                                        padding: '8px 16px', borderRadius: '999px', border: 'none', cursor: 'pointer',
+                                        padding: '8px 16px', borderRadius: '999px', cursor: 'pointer',
                                         background: selectedConditions.includes(cond) ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.05)',
                                         color: selectedConditions.includes(cond) ? 'var(--accent-blue)' : 'var(--text-secondary)',
                                         border: selectedConditions.includes(cond) ? '1px solid rgba(99,102,241,0.4)' : '1px solid var(--border)',

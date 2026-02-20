@@ -184,7 +184,6 @@ export default function Sidebar({ userRole, userName, userEmail, collapsed, onTo
                                 border: isActive ? '1px solid rgba(99, 102, 241, 0.2)' : '1px solid transparent',
                                 justifyContent: collapsed ? 'center' : undefined,
                                 padding: collapsed ? '10px' : '10px 12px',
-                                title: collapsed ? item.label : undefined,
                             }}
                             title={collapsed ? item.label : undefined}
                         >

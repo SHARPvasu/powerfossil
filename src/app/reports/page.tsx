@@ -121,7 +121,7 @@ export default function ReportsPage() {
                             return (
                                 <div key={item.type}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                                        <div style={{ display: 'flex', align: 'center', gap: '8px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                             <span style={{ width: 10, height: 10, borderRadius: '50%', background: item.color, display: 'inline-block', marginTop: 3 }} />
                                             <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 500, marginLeft: 8 }}>{item.type}</span>
                                         </div>
