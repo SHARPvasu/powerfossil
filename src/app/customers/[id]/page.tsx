@@ -201,7 +201,7 @@ export default function CustomerDetailPage() {
                                 ].map(f => (
                                     <div key={f.key}>
                                         <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>{f.label}</label>
-                                        <input type={f.type || 'text'} style={inputCls} value={(editForm as Record<string, string>)[f.key] || ''} onChange={e => setEditForm(p => ({ ...p, [f.key]: e.target.value }))} />
+                                        <input type={f.type || 'text'} style={inputCls} value={(editForm as any)[f.key] || ''} onChange={e => setEditForm(p => ({ ...p, [f.key]: e.target.value }))} />
                                     </div>
                                 ))}
                             </div>
@@ -369,7 +369,7 @@ export default function CustomerDetailPage() {
                                     ].map(f => (
                                         <div key={f.key}>
                                             <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>{f.label}</label>
-                                            <input type={f.type || 'text'} style={inputCls} value={(familyForm as Record<string, string>)[f.key] || ''} onChange={e => setFamilyForm(p => ({ ...p, [f.key]: e.target.value }))} placeholder={(f as { placeholder?: string }).placeholder} />
+                                            <input type={f.type || 'text'} style={inputCls} value={(familyForm as any)[f.key] || ''} onChange={e => setFamilyForm(p => ({ ...p, [f.key]: e.target.value }))} placeholder={(f as { placeholder?: string }).placeholder} />
                                         </div>
                                     ))}
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
