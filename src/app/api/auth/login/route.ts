@@ -7,20 +7,43 @@ export async function POST(req: NextRequest) {
     try {
         const { email, password } = await req.json()
 
+        console.log('Login attempt for:', email)
+
         if (!email || !password) {
-            return NextResponse.json({ error: 'Email and password required' }, { status: 400 })
+            console.log('Missing email or password')
+            return NextResponse.json({ error: 'Email and password are required' }, { status: 400 })
         }
 
-        const user = await prisma.user.findUnique({ where: { email } })
+        // Find user in database
+        const user = await prisma.user.findUnique({ 
+            where: { email },
+            select: {
+                id: true,
+                email: true,
+                name: true,
+                password: true,
+                role: true
+            }
+        })
+        
         if (!user) {
-            return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
+            console.log('User not found:', email)
+            return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 })
         }
 
+        console.log('User found:', user.email, 'Role:', user.role)
+
+        // Verify password
         const valid = await bcrypt.compare(password, user.password)
+        
         if (!valid) {
-            return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
+            console.log('Invalid password for:', email)
+            return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 })
         }
 
+        console.log('Password verified for:', email)
+
+        // Generate JWT token
         const token = await signToken({
             id: user.id,
             email: user.email,
@@ -28,11 +51,19 @@ export async function POST(req: NextRequest) {
             role: user.role,
         })
 
+        console.log('Token generated for:', email)
+
         const response = NextResponse.json({
             success: true,
-            user: { id: user.id, name: user.name, email: user.email, role: user.role }
+            user: { 
+                id: user.id, 
+                name: user.name, 
+                email: user.email, 
+                role: user.role 
+            }
         })
 
+        // Set cookie
         response.cookies.set('auth_token', token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
@@ -41,9 +72,23 @@ export async function POST(req: NextRequest) {
             path: '/',
         })
 
+        console.log('Login successful for:', email)
         return response
+
     } catch (error) {
         console.error('Login error:', error)
-        return NextResponse.json({ error: 'Server error' }, { status: 500 })
+        
+        // Handle specific Prisma errors
+        if (error instanceof Error) {
+            if (error.message.includes('P1001')) {
+                return NextResponse.json({ 
+                    error: 'Database connection error. Please try again later.' 
+                }, { status: 503 })
+            }
+        }
+        
+        return NextResponse.json({ 
+            error: 'Server error occurred. Please try again.' 
+        }, { status: 500 })
     }
 }
