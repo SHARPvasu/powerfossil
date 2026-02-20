@@ -1,0 +1,171 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./powerfossil.db"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      String   @default("AGENT") // ADMIN, AGENT, AUDITOR
+  avatar    String?
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  customers     Customer[]
+  calls         CallLog[]
+  notes         Note[]
+  policies      Policy[]
+}
+
+model Customer {
+  id          String   @id @default(cuid())
+  // Basic Info
+  firstName   String
+  lastName    String
+  email       String?
+  phone       String
+  dob         String?
+  gender      String?
+  address     String?
+  city        String?
+  state       String?
+  pincode     String?
+  occupation  String?
+  income      String?
+  // KYC
+  aadharNo    String?
+  panNo       String?
+  kycStatus   String   @default("PENDING") // PENDING, VERIFIED, REJECTED
+  // Photos & Documents
+  livePhoto   String?
+  aadharFront String?
+  aadharBack  String?
+  panPhoto    String?
+  // Pre-existing conditions
+  preExisting String?  // JSON string
+  // Status
+  status      String   @default("ACTIVE")
+  agentId     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  agent        User       @relation(fields: [agentId], references: [id])
+  policies     Policy[]
+  family       FamilyMember[]
+  notes        Note[]
+  callLogs     CallLog[]
+  proposerFor  Policy[]   @relation("ProposerRelation")
+}
+
+model FamilyMember {
+  id           String   @id @default(cuid())
+  customerId   String
+  name         String
+  relation     String
+  dob          String?
+  gender       String?
+  preExisting  String?
+  insured      Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  customer     Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+}
+
+model Policy {
+  id             String   @id @default(cuid())
+  policyNumber   String   @unique
+  type           String   // HEALTH, MOTOR, LIFE, TERM
+  subType        String?
+  // Insurer Details
+  company        String
+  planName       String
+  sumInsured     Float?
+  premium        Float
+  paymentMode    String   @default("ANNUAL") // ANNUAL, SEMI, QUARTER, MONTHLY
+  // Dates
+  startDate      String
+  endDate        String
+  issueDate      String?
+  // Status
+  status         String   @default("ACTIVE") // ACTIVE, EXPIRED, CANCELLED, RENEWED
+  tags           String?  // JSON string of tags
+  // Relations
+  customerId     String
+  proposerId     String?
+  agentId        String
+  // Motor specific
+  vehicleNo      String?
+  vehicleModel   String?
+  vehicleYear    String?
+  // Life specific
+  nominee        String?
+  nomineeRelation String?
+  // Notification
+  reminderSent   Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  customer       Customer @relation(fields: [customerId], references: [id])
+  proposer       Customer? @relation("ProposerRelation", fields: [proposerId], references: [id])
+  agent          User     @relation(fields: [agentId], references: [id])
+  documents      Document[]
+}
+
+model Document {
+  id          String   @id @default(cuid())
+  policyId    String
+  name        String
+  type        String
+  url         String
+  size        Int?
+  createdAt   DateTime @default(now())
+
+  policy      Policy   @relation(fields: [policyId], references: [id], onDelete: Cascade)
+}
+
+model CallLog {
+  id          String   @id @default(cuid())
+  customerId  String
+  agentId     String
+  type        String   // INCOMING, OUTGOING, MISSED
+  duration    Int?     // seconds
+  notes       String?
+  outcome     String?  // INTERESTED, NOT_INTERESTED, CALLBACK, POLICY_SOLD, RENEWAL
+  callDate    DateTime @default(now())
+
+  customer    Customer @relation(fields: [customerId], references: [id])
+  agent       User     @relation(fields: [agentId], references: [id])
+}
+
+model Note {
+  id          String   @id @default(cuid())
+  customerId  String
+  agentId     String
+  content     String
+  type        String   @default("GENERAL") // GENERAL, FOLLOWUP, COMPLAINT, RENEWAL
+  createdAt   DateTime @default(now())
+
+  customer    Customer @relation(fields: [customerId], references: [id])
+  agent       User     @relation(fields: [agentId], references: [id])
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  title       String
+  message     String
+  type        String   // RENEWAL, PAYMENT, BIRTHDAY, FOLLOWUP
+  targetId    String?  // policyId or customerId
+  targetType  String?
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
