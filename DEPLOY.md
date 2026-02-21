@@ -68,17 +68,18 @@ For automatic CI/CD deployment via GitHub Actions, follow **[DEPLOYMENT.md](./DE
 1. Go to **[vercel.com](https://vercel.com)** → Sign in with GitHub
 2. Click **"Add New Project"** → Import `powerfossil` repo
 3. Framework: **Next.js** (auto-detected)
-4. Click **"Environment Variables"** and add ALL of these (use **Plaintext** values, not Secrets):
+4. Click **"Environment Variables"** and add ALL of these (choose **Plaintext** for each value, not **Secret** references):
 
-| Variable | Value |
-|----------|-------|
-| `DATABASE_URL` | Your Neon **pooled** connection string |
-| `DIRECT_URL` | Your Neon **direct** connection string |
-| `JWT_SECRET` | Your 64-char random secret |
-| `NODE_ENV` | `production` |
+| Variable | Value | Type |
+|----------|-------|------|
+| `DATABASE_URL` | Your Neon **pooled** connection string | Plaintext |
+| `DIRECT_URL` | Your Neon **direct** connection string | Plaintext |
+| `JWT_SECRET` | Your 64-char random secret | Plaintext |
+| `NODE_ENV` | `production` | Plaintext |
 
-5. Confirm each variable is saved as **Plaintext** (not a Secret reference).
-6. Click **"Deploy"** 🚀
+5. If `DATABASE_URL` already exists as a **Secret** reference, delete it first and re-add it as **Plaintext**.
+6. Confirm each variable is saved as **Plaintext** (not a Secret reference).
+7. Click **"Deploy"** 🚀
 
 Build command runs automatically: `prisma generate && next build`
 
@@ -150,7 +151,8 @@ Both free tiers are more than enough for production use as an insurance agent pl
 → In Vercel project settings → Environment Variables → make sure both vars are added to **Production** environment
 
 ### "Environment Variable 'DATABASE_URL' references Secret 'database_url'"
-→ Delete the variable and re-add it as **Plaintext** (not a Secret reference). Ensure `DIRECT_URL` is also Plaintext.
+→ Vercel is pointing `DATABASE_URL` at a missing Secret. Delete the existing variable and re-add it as **Plaintext**.
+→ Repeat the same check for `DIRECT_URL` and `JWT_SECRET` to ensure they are also Plaintext.
 
 ### Login not working after deploy
 → Make sure `JWT_SECRET` is set in Vercel. Run `npm run db:seed` locally pointing at Neon to create the users.
