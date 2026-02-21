@@ -231,7 +231,7 @@ vercel --prod
 
 1. Go to [vercel.com/dashboard](https://vercel.com/dashboard)
 2. Select your `powerfossil` project
-3. Ensure `DATABASE_URL`, `DIRECT_URL`, and `JWT_SECRET` are saved as **Plaintext** environment variables (not Secret references)
+3. Ensure `DATABASE_URL`, `DIRECT_URL`, and `JWT_SECRET` are saved as **Plaintext** environment variables (not Secret references). If any already exist as Secrets, delete and re-add them as Plaintext.
 4. Click **Deployments**
 5. Click **Redeploy** (if needed)
 
@@ -292,7 +292,8 @@ npm run db:reset
 
 ### "Environment Variable 'DATABASE_URL' references Secret 'database_url'"
 
-→ In Vercel project settings, delete `DATABASE_URL` and re-add it as **Plaintext** (not a Secret reference). Do the same for `DIRECT_URL`.
+→ In Vercel project settings, delete `DATABASE_URL` and re-add it as **Plaintext** (not a Secret reference).
+→ Repeat the same check for `DIRECT_URL` and `JWT_SECRET` so they are all Plaintext.
 
 ### Vercel Token Issues
 
