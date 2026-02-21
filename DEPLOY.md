@@ -1,7 +1,10 @@
-# 🚀 PowerFossil — Vercel Deployment Guide
+# 🚀 PowerFossil — Quick Vercel Deployment Guide
 
 ## Overview
-This guide deploys PowerFossil to **Vercel** (free hosting) with **Neon** (free PostgreSQL database).
+
+**⚡ Recommended:** For automatic deployment via GitHub Actions, see **[DEPLOYMENT.md](./DEPLOYMENT.md)**
+
+This guide provides a quick manual deployment to **Vercel** (free hosting) with **Neon** (free PostgreSQL database).
 
 ---
 
@@ -40,10 +43,7 @@ node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
 
 Then push the schema and seed data:
 ```powershell
-cd "e:\insurance agent projec\powerfossil"
-npx prisma generate
-npx prisma db push
-npx tsx prisma/seed.ts
+npm run setup
 ```
 
 You should see:
@@ -57,25 +57,13 @@ You should see:
 
 ---
 
-## Step 3 — Push Code to GitHub
+## Step 3 — Deploy to Vercel
 
-```powershell
-cd "e:\insurance agent projec\powerfossil"
+### Option A: Automatic Deployment (Recommended)
 
-# Initialize git (if not already done)
-git init
-git add .
-git commit -m "feat: initial PowerFossil release"
+For automatic CI/CD deployment via GitHub Actions, follow **[DEPLOYMENT.md](./DEPLOYMENT.md)** for detailed setup instructions.
 
-# Create repo on github.com → New Repository → powerfossil → Copy the remote URL
-git remote add origin https://github.com/YOUR_USERNAME/powerfossil.git
-git branch -M main
-git push -u origin main
-```
-
----
-
-## Step 4 — Deploy to Vercel
+### Option B: Manual Deployment
 
 1. Go to **[vercel.com](https://vercel.com)** → Sign in with GitHub
 2. Click **"Add New Project"** → Import `powerfossil` repo
@@ -95,7 +83,7 @@ Build command runs automatically: `prisma generate && next build`
 
 ---
 
-## Step 5 — Verify Deployment
+## Step 4 — Verify Deployment
 
 Once deployed, visit your Vercel URL (e.g. `https://powerfossil.vercel.app`):
 
@@ -104,14 +92,20 @@ Once deployed, visit your Vercel URL (e.g. `https://powerfossil.vercel.app`):
 
 ---
 
-## Updating the App (Future Deploys)
+## Updating the App
 
+### With GitHub Actions (Recommended)
 ```powershell
 git add .
 git commit -m "feat: your change description"
 git push
 ```
-Vercel auto-deploys on every push to `main`. ✅
+Deployment happens automatically! ✅
+
+### Manual Deployment
+```powershell
+vercel --prod
+```
 
 ---
 
@@ -119,12 +113,12 @@ Vercel auto-deploys on every push to `main`. ✅
 
 ```powershell
 # Push schema changes to Neon
-npx prisma db push
+npm run db:push
 
 # Re-generate the Prisma client
-npx prisma generate
+npm run db:generate
 
-# Then push to git (Vercel will rebuild automatically)
+# Then push to git (auto-deploy) or run vercel --prod
 git add prisma/schema.prisma
 git commit -m "chore: update schema"
 git push
@@ -155,4 +149,10 @@ Both free tiers are more than enough for production use as an insurance agent pl
 → In Vercel project settings → Environment Variables → make sure both vars are added to **Production** environment
 
 ### Login not working after deploy
-→ Make sure `JWT_SECRET` is set in Vercel. Run `npx tsx prisma/seed.ts` locally pointing at Neon to create the users.
+→ Make sure `JWT_SECRET` is set in Vercel. Run `npm run db:seed` locally pointing at Neon to create the users.
+
+---
+
+## Need More Details?
+
+For comprehensive deployment documentation including GitHub Actions setup, see **[DEPLOYMENT.md](./DEPLOYMENT.md)**.

@@ -1,0 +1,37 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.*
+
+# Testing
+coverage
+
+# Development
+.next
+out
+
+# Environment files
+.env*
+!.env.example
+
+# Development tools
+.vscode
+.idea
+
+# Debug files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Build artifacts
+*.tsbuildinfo
+
+# Local database files
+*.db
+*.db-journal
+
+# Documentation (not needed for deployment)
+BUILD_FIXES.md
+DEPLOY.md
+DEPLOYMENT.md
