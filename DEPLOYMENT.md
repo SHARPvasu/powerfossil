@@ -231,8 +231,9 @@ vercel --prod
 
 1. Go to [vercel.com/dashboard](https://vercel.com/dashboard)
 2. Select your `powerfossil` project
-3. Click **Deployments**
-4. Click **Redeploy** (if needed)
+3. Ensure `DATABASE_URL`, `DIRECT_URL`, and `JWT_SECRET` are saved as **Plaintext** environment variables (not Secret references)
+4. Click **Deployments**
+5. Click **Redeploy** (if needed)
 
 ---
 
@@ -288,6 +289,10 @@ npm run db:reset
 ### Deployment Successful But Login Not Working
 
 → Check `JWT_SECRET` matches between local and GitHub Secrets
+
+### "Environment Variable 'DATABASE_URL' references Secret 'database_url'"
+
+→ In Vercel project settings, delete `DATABASE_URL` and re-add it as **Plaintext** (not a Secret reference). Do the same for `DIRECT_URL`.
 
 ### Vercel Token Issues
 
