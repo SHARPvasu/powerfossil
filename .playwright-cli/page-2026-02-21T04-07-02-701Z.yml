@@ -1,0 +1,49 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e6]: UV
+      - heading "PowerFossil" [level=1] [ref=e7]
+      - paragraph [ref=e8]: Insurance Management System
+    - generic [ref=e9]:
+      - heading "Sign in to your account" [level=2] [ref=e10]
+      - generic [ref=e11]:
+        - generic [ref=e12]:
+          - generic [ref=e13]: Email Address
+          - generic [ref=e14]:
+            - img
+            - textbox "agent@powerfossil.in" [ref=e15]: admin@powerfossil.in
+        - generic [ref=e16]:
+          - generic [ref=e17]: Password
+          - generic [ref=e18]:
+            - img
+            - textbox "••••••••" [ref=e19]: admin123
+            - button "Show password" [ref=e20] [cursor=pointer]:
+              - img [ref=e21]
+        - generic [ref=e55]:
+          - paragraph [ref=e56]: Attempts remaining
+          - paragraph [ref=e57]: 4/5
+        - generic [ref=e60]:
+          - img [ref=e61]
+          - text: "Database configuration missing: DIRECT_URL.. 4 attempts remaining."
+        - button "Sign In Securely" [ref=e24] [cursor=pointer]:
+          - generic [ref=e25]:
+            - img [ref=e26]
+            - text: Sign In Securely
+      - generic [ref=e29]:
+        - img [ref=e30]
+        - generic [ref=e33]: 256-bit JWT · HTTP-only Cookies · Brute-force Protected
+      - generic [ref=e34]:
+        - paragraph [ref=e35]: DEMO CREDENTIALS
+        - generic [ref=e36]:
+          - 'button "Admin: admin@powerfossil.in" [ref=e37] [cursor=pointer]':
+            - generic [ref=e38]:
+              - generic [ref=e39]: "Admin:"
+              - text: admin@powerfossil.in
+          - 'button "Agent: agent@powerfossil.in" [ref=e40] [cursor=pointer]':
+            - generic [ref=e41]:
+              - generic [ref=e42]: "Agent:"
+              - text: agent@powerfossil.in
+    - paragraph [ref=e43]: PowerFossil © 2026 · Secure Insurance Platform
+  - button "Open Next.js Dev Tools" [ref=e50] [cursor=pointer]:
+    - img [ref=e51]
+  - alert [ref=e44]
