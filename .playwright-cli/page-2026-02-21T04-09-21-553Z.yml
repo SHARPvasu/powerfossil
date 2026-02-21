@@ -1,0 +1,142 @@
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e50] [cursor=pointer]:
+    - img [ref=e51]
+  - alert [ref=e44]: PowerFossil – Insurance Management System
+  - generic [ref=e54]:
+    - complementary [ref=e55]:
+      - generic [ref=e56]:
+        - generic [ref=e58]: UV
+        - generic [ref=e59]:
+          - generic [ref=e60]: PowerFossil
+          - generic [ref=e61]: Insurance
+        - button [ref=e62] [cursor=pointer]:
+          - img [ref=e63]
+      - navigation [ref=e65]:
+        - link "Dashboard" [ref=e66] [cursor=pointer]:
+          - /url: /dashboard
+          - img [ref=e68]
+          - generic [ref=e73]: Dashboard
+        - link "Customers" [ref=e74] [cursor=pointer]:
+          - /url: /customers
+          - img [ref=e76]
+          - generic [ref=e81]: Customers
+        - link "Policies" [ref=e82] [cursor=pointer]:
+          - /url: /policies
+          - img [ref=e84]
+          - generic [ref=e86]: Policies
+        - link "Renewals" [ref=e87] [cursor=pointer]:
+          - /url: /renewals
+          - img [ref=e89]
+          - generic [ref=e92]: Renewals
+        - link "Call Tracker" [ref=e93] [cursor=pointer]:
+          - /url: /calls
+          - img [ref=e95]
+          - generic [ref=e97]: Call Tracker
+        - link "Reports" [ref=e98] [cursor=pointer]:
+          - /url: /reports
+          - img [ref=e100]
+          - generic [ref=e101]: Reports
+        - generic [ref=e102]: Admin
+        - link "Admin Panel" [ref=e103] [cursor=pointer]:
+          - /url: /admin
+          - img [ref=e105]
+          - generic [ref=e108]: Admin Panel
+      - generic [ref=e110]:
+        - generic [ref=e111]: AU
+        - generic [ref=e112]:
+          - generic [ref=e113]: Admin User
+          - generic [ref=e114]: ADMIN
+        - button "Logout" [ref=e115] [cursor=pointer]:
+          - img [ref=e116]
+    - main [ref=e119]:
+      - generic [ref=e120]:
+        - generic [ref=e121]:
+          - heading "Dashboard Overview" [level=1] [ref=e124]
+          - paragraph [ref=e123]: Saturday, 21 February 2026
+        - generic [ref=e125]:
+          - generic [ref=e127]:
+            - generic [ref=e128]:
+              - paragraph [ref=e129]: Total Customers
+              - paragraph [ref=e130]: "3"
+              - paragraph [ref=e131]: All registered clients
+            - img [ref=e133]
+          - generic [ref=e139]:
+            - generic [ref=e140]:
+              - paragraph [ref=e141]: Active Policies
+              - paragraph [ref=e142]: "3"
+              - paragraph [ref=e143]: 1 expired
+            - img [ref=e145]
+          - generic [ref=e148]:
+            - generic [ref=e149]:
+              - paragraph [ref=e150]: Monthly Premium
+              - paragraph [ref=e151]: ₹75,500
+              - paragraph [ref=e152]: Active policies sum
+            - img [ref=e154]
+          - generic [ref=e157]:
+            - generic [ref=e158]:
+              - paragraph [ref=e159]: Today's Calls
+              - paragraph [ref=e160]: "2"
+              - paragraph [ref=e161]: Logged call records
+            - img [ref=e163]
+        - generic [ref=e165]:
+          - generic [ref=e166]:
+            - generic [ref=e167]:
+              - heading "Policy Breakdown" [level=2] [ref=e168]
+              - link "View All →" [ref=e169] [cursor=pointer]:
+                - /url: /policies
+            - generic [ref=e170]:
+              - generic [ref=e172]:
+                - generic [ref=e173]: Health Insurance
+                - generic [ref=e174]: "2"
+              - generic [ref=e178]:
+                - generic [ref=e179]: Motor Insurance
+                - generic [ref=e180]: "1"
+              - generic [ref=e184]:
+                - generic [ref=e185]: Life Insurance
+                - generic [ref=e186]: "1"
+          - generic [ref=e189]:
+            - generic [ref=e190]:
+              - heading "Expiring Soon1" [level=2] [ref=e191]
+              - link "View All →" [ref=e192] [cursor=pointer]:
+                - /url: /renewals
+            - generic [ref=e194]:
+              - generic [ref=e195]:
+                - paragraph [ref=e196]: Vikram Patel
+                - paragraph [ref=e197]: HD-2024-002 · MOTOR
+              - generic [ref=e198]:
+                - paragraph [ref=e199]: 15d left
+                - paragraph [ref=e200]: 2026-03-08
+        - generic [ref=e201]:
+          - generic [ref=e202]:
+            - heading "Recent Customers" [level=2] [ref=e203]
+            - link "+ Add Customer" [ref=e204] [cursor=pointer]:
+              - /url: /customers/new
+          - table [ref=e205]:
+            - rowgroup [ref=e206]:
+              - row "Name Phone Added Actions" [ref=e207]:
+                - columnheader "Name" [ref=e208]
+                - columnheader "Phone" [ref=e209]
+                - columnheader "Added" [ref=e210]
+                - columnheader "Actions" [ref=e211]
+            - rowgroup [ref=e212]:
+              - row "Arjun Singh 8765432109 21/2/2026 View →" [ref=e213]:
+                - cell "Arjun Singh" [ref=e214]
+                - cell "8765432109" [ref=e215]
+                - cell "21/2/2026" [ref=e216]
+                - cell "View →" [ref=e217]:
+                  - link "View →" [ref=e218] [cursor=pointer]:
+                    - /url: /customers/demo-customer-3
+              - row "Priya Mehta 9123456789 21/2/2026 View →" [ref=e219]:
+                - cell "Priya Mehta" [ref=e220]
+                - cell "9123456789" [ref=e221]
+                - cell "21/2/2026" [ref=e222]
+                - cell "View →" [ref=e223]:
+                  - link "View →" [ref=e224] [cursor=pointer]:
+                    - /url: /customers/demo-customer-2
+              - row "Vikram Patel 9876543210 21/2/2026 View →" [ref=e225]:
+                - cell "Vikram Patel" [ref=e226]
+                - cell "9876543210" [ref=e227]
+                - cell "21/2/2026" [ref=e228]
+                - cell "View →" [ref=e229]:
+                  - link "View →" [ref=e230] [cursor=pointer]:
+                    - /url: /customers/demo-customer-1
