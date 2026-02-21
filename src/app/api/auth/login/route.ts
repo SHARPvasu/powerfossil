@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/db'
+import { prisma, getDatabaseEnvIssues, getDatabaseErrorDetails } from '@/lib/db'
 import { signToken } from '@/lib/auth'
 import bcrypt from 'bcryptjs'
 
@@ -12,6 +12,13 @@ export async function POST(req: NextRequest) {
         if (!email || !password) {
             console.log('Missing email or password')
             return NextResponse.json({ error: 'Email and password are required' }, { status: 400 })
+        }
+
+        const envIssues = getDatabaseEnvIssues()
+        if (envIssues.length > 0) {
+            return NextResponse.json({
+                error: `Database configuration missing: ${envIssues.join(', ')}.`,
+            }, { status: 500 })
         }
 
         // Find user in database
@@ -77,16 +84,12 @@ export async function POST(req: NextRequest) {
 
     } catch (error) {
         console.error('Login error:', error)
-        
-        // Handle specific Prisma errors
-        if (error instanceof Error) {
-            if (error.message.includes('P1001')) {
-                return NextResponse.json({ 
-                    error: 'Database connection error. Please try again later.' 
-                }, { status: 503 })
-            }
+
+        const details = getDatabaseErrorDetails(error)
+        if (details) {
+            return NextResponse.json({ error: details.message }, { status: details.status })
         }
-        
+
         return NextResponse.json({ 
             error: 'Server error occurred. Please try again.' 
         }, { status: 500 })
