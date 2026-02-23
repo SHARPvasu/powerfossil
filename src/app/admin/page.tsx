@@ -89,7 +89,7 @@ export default function AdminPage() {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                             {[
                                 { label: 'Full Name', key: 'name', placeholder: 'Rahul Sharma', type: 'text' },
-                                { label: 'Email', key: 'email', placeholder: 'rahul@powerfossil.in', type: 'email' },
+                                { label: 'Email', key: 'email', placeholder: 'rahul@uvinsurance.in', type: 'email' },
                                 { label: 'Password', key: 'password', placeholder: '••••••••', type: 'password' },
                                 { label: 'Phone', key: 'phone', placeholder: '+91 98765 43210', type: 'tel' },
                             ].map(f => (

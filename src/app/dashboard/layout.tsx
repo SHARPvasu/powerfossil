@@ -43,7 +43,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         animation: 'spin 1s linear infinite',
                         margin: '0 auto 16px',
                     }} />
-                    <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Loading PowerFossil...</p>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Loading UV Insurance Agency...</p>
                 </div>
                 <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
             </div>

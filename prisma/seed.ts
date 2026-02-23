@@ -4,16 +4,16 @@ import bcrypt from 'bcryptjs'
 const prisma = new PrismaClient()
 
 async function main() {
-    console.log('🌱 Seeding PowerFossil database...')
+    console.log('🌱 Seeding UV Insurance Agency database...')
 
     // Create admin user
     const adminPassword = await bcrypt.hash('admin123', 10)
     const admin = await prisma.user.upsert({
-        where: { email: 'admin@powerfossil.in' },
+        where: { email: 'admin@uvinsurance.in' },
         update: {},
         create: {
             name: 'Admin User',
-            email: 'admin@powerfossil.in',
+            email: 'admin@uvinsurance.in',
             password: adminPassword,
             role: 'ADMIN',
             phone: '+91 98000 00001',
@@ -24,17 +24,32 @@ async function main() {
     // Create agent user
     const agentPassword = await bcrypt.hash('agent123', 10)
     const agent = await prisma.user.upsert({
-        where: { email: 'agent@powerfossil.in' },
+        where: { email: 'agent@uvinsurance.in' },
         update: {},
         create: {
             name: 'Raj Sharma',
-            email: 'agent@powerfossil.in',
+            email: 'agent@uvinsurance.in',
             password: agentPassword,
             role: 'AGENT',
             phone: '+91 98765 43210',
         },
     })
     console.log('✅ Agent user created:', agent.email)
+
+    // Create auditor user
+    const auditorPassword = await bcrypt.hash('auditor123', 10)
+    await prisma.user.upsert({
+        where: { email: 'auditor@uvinsurance.in' },
+        update: {},
+        create: {
+            name: 'Anita Verma',
+            email: 'auditor@uvinsurance.in',
+            password: auditorPassword,
+            role: 'AUDITOR',
+            phone: '+91 97000 00099',
+        },
+    })
+    console.log('✅ Auditor user created: auditor@uvinsurance.in')
 
     // Create sample customers
     const customer1 = await prisma.customer.upsert({
@@ -260,8 +275,9 @@ async function main() {
     console.log('✅ Sample notes and call logs created')
     console.log('\n🎉 Database seeded successfully!')
     console.log('\n📋 Login Credentials:')
-    console.log('   Admin: admin@powerfossil.in / admin123')
-    console.log('   Agent: agent@powerfossil.in / agent123')
+    console.log('   Admin:   admin@uvinsurance.in   / admin123')
+    console.log('   Agent:   agent@uvinsurance.in   / agent123')
+    console.log('   Auditor: auditor@uvinsurance.in / auditor123')
 }
 
 main()

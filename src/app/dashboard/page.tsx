@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 
+interface UserSession { id: string; name: string; email: string; role: string; }
+
 interface DashboardStats {
     totalCustomers: number
     totalPolicies: number
@@ -70,8 +72,13 @@ export default function DashboardPage() {
     const [expiringPolicies, setExpiringPolicies] = useState<ExpiringPolicy[]>([])
     const [recentCustomers, setRecentCustomers] = useState<RecentCustomer[]>([])
     const [loading, setLoading] = useState(true)
+    const [userRole, setUserRole] = useState<string | null>(null)
 
     useEffect(() => {
+        fetch('/api/auth/session').then(r => r.json()).then(d => {
+            if (d.user) setUserRole(d.user.role)
+        }).catch(() => { })
+
         fetch('/api/dashboard')
             .then(r => r.json())
             .then(data => {
@@ -235,12 +242,14 @@ export default function DashboardPage() {
             <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '16px', padding: '24px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                     <h2 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)' }}>Recent Customers</h2>
-                    <Link href="/customers/new" style={{
-                        fontSize: '12px', color: 'white', textDecoration: 'none',
-                        background: 'var(--gradient-primary)', padding: '6px 14px', borderRadius: '8px', fontWeight: 600,
-                    }}>
-                        + Add Customer
-                    </Link>
+                    {userRole !== 'AUDITOR' && (
+                        <Link href="/customers/new" style={{
+                            fontSize: '12px', color: 'white', textDecoration: 'none',
+                            background: 'var(--gradient-primary)', padding: '6px 14px', borderRadius: '8px', fontWeight: 600,
+                        }}>
+                            + Add Customer
+                        </Link>
+                    )}
                 </div>
                 {recentCustomers.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>

@@ -2,7 +2,7 @@
 
 ## Summary
 
-Successfully configured automatic Vercel deployment via GitHub Actions CI/CD for the PowerFossil Insurance Management System.
+Successfully configured automatic Vercel deployment via GitHub Actions CI/CD for the UV Insurance Agency Insurance Management System.
 
 ## 📋 What Was Done
 
@@ -57,7 +57,7 @@ Successfully configured automatic Vercel deployment via GitHub Actions CI/CD for
    - Updated npm commands to use proper scripts
 
 3. **`README.md`**
-   - Completely rewritten with PowerFossil-specific content
+   - Completely rewritten with UV Insurance Agency-specific content
    - Added feature list
    - Added deployment section with links to guides
    - Added tech stack information

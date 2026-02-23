@@ -46,13 +46,34 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
     const session = await getSession()
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (session.role === 'AUDITOR') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const data = await req.json()
+    const isAgent = session.role === 'AGENT'
+
+    // Agents create customers as PENDING_APPROVAL. Admins create them as ACTIVE.
+    const status = isAgent ? 'PENDING_APPROVAL' : 'ACTIVE'
+
     const customer = await prisma.customer.create({
         data: {
             ...data,
             agentId: session.id,
+            status,
         },
     })
+
+    if (isAgent) {
+        // Notify admins about the new customer requiring approval
+        await prisma.notification.create({
+            data: {
+                title: 'New Customer Approval Required',
+                message: `Agent ${session.name} created a new customer: ${customer.firstName} ${customer.lastName}`,
+                type: 'APPROVAL',
+                targetId: customer.id,
+                targetType: 'CUSTOMER'
+            }
+        })
+    }
+
     return NextResponse.json({ customer }, { status: 201 })
 }

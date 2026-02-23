@@ -45,6 +45,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
     const session = await getSession()
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (session.role === 'AUDITOR') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const data = await req.json()
     const policy = await prisma.policy.create({

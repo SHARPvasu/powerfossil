@@ -9,8 +9,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "PowerFossil – Insurance Management System",
-  description: "Comprehensive insurance management platform for agents, admins and auditors",
+  title: "UV Insurance Agency – Insurance Management System",
+  description: "Comprehensive CRM and policy management for insurance agents",
   icons: {
     icon: "/favicon.ico",
   },

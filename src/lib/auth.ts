@@ -2,7 +2,7 @@ import { SignJWT, jwtVerify } from 'jose'
 import { cookies } from 'next/headers'
 
 const secret = new TextEncoder().encode(
-    process.env.JWT_SECRET || 'powerfossil-secret-key-2024'
+    process.env.JWT_SECRET || 'uv-insurance-secret-key-2026'
 )
 
 export interface TokenPayload {

@@ -1,5 +1,5 @@
 {
-  "name": "powerfossil",
+  "name": "uv-insurance-agency",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -24,6 +24,8 @@
     "date-fns": "^4.1.0",
     "framer-motion": "^12.34.3",
     "jose": "^5.9.6",
+    "jspdf": "^4.2.0",
+    "jspdf-autotable": "^5.0.7",
     "lucide-react": "^0.475.0",
     "next": "^15.1.7",
     "prisma": "^6.2.1",

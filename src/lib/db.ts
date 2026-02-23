@@ -20,7 +20,7 @@ export const databaseEnvStatus = () => ({
 export const getDatabaseEnvIssues = () => {
   const issues: string[] = []
   if (!process.env.DATABASE_URL) issues.push('DATABASE_URL')
-  if (!process.env.DIRECT_URL) issues.push('DIRECT_URL')
+  // if (!process.env.DIRECT_URL) issues.push('DIRECT_URL')
   return issues
 }
 

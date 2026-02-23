@@ -1,4 +1,4 @@
-# PowerFossil - Insurance Management System
+# UV Insurance Agency - Insurance Management System
 
 A comprehensive insurance agent management platform built with modern web technologies.
 
@@ -66,8 +66,8 @@ npm run db:seed
 
 After seeding:
 
-- **Admin:** admin@powerfossil.in / admin123
-- **Agent:** agent@powerfossil.in / agent123
+- **Admin:** admin@uvinsurance.in / admin123
+- **Agent:** agent@uvinsurance.in / agent123
 
 ## 🚢 Deployment
 
@@ -110,7 +110,7 @@ npm run setup            # Generate, push, and seed database
 ## 📁 Project Structure
 
 ```
-powerfossil/
+UV Insurance Agency/
 ├── src/
 │   ├── app/              # Next.js app router
 │   │   ├── api/         # API routes

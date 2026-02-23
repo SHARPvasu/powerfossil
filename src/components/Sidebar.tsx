@@ -144,7 +144,7 @@ export default function Sidebar({ userRole, userName, userEmail, collapsed, onTo
                 </div>
                 {!collapsed && (
                     <div>
-                        <div style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text-primary)', letterSpacing: '-0.3px' }}>PowerFossil</div>
+                        <div style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text-primary)', letterSpacing: '-0.3px' }}>UV Insurance Agency</div>
                         <div style={{ fontSize: '10px', color: 'var(--text-muted)', letterSpacing: '1px', textTransform: 'uppercase' }}>Insurance</div>
                     </div>
                 )}

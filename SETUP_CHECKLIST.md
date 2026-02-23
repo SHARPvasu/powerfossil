@@ -17,7 +17,7 @@ This checklist helps you set up automatic deployment to Vercel via GitHub Action
 ### 1. Database Setup (Neon)
 
 - [ ] Sign up at [neon.tech](https://neon.tech)
-- [ ] Create a new project named `powerfossil`
+- [ ] Create a new project named `UV Insurance Agency`
 - [ ] Select region (e.g., Asia Pacific - Singapore)
 - [ ] Copy **Pooled** connection string → `DATABASE_URL`
 - [ ] Toggle to **Direct** connection → Copy → `DIRECT_URL`
@@ -101,8 +101,8 @@ The GitHub Actions workflow will automatically:
 - [ ] Deployment URL is posted as commit comment
 - [ ] Visit Vercel URL and verify the app loads
 - [ ] Test login with demo credentials:
-  - Admin: `admin@powerfossil.in` / `admin123`
-  - Agent: `agent@powerfossil.in` / `agent123`
+  - Admin: `admin@UV Insurance Agency.in` / `admin123`
+  - Agent: `agent@UV Insurance Agency.in` / `agent123`
 
 ---
 
@@ -160,6 +160,6 @@ Or use Vercel dashboard → Deployments → Click previous deployment → Promot
 
 ## 🎉 Success!
 
-After completing this checklist, your PowerFossil application will automatically deploy to Vercel on every push to the master/main branch!
+After completing this checklist, your UV Insurance Agency application will automatically deploy to Vercel on every push to the master/main branch!
 
 **Last Updated:** 2025-02-20

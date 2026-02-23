@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
+interface UserSession { id: string; name: string; email: string; role: string; }
+
 interface Policy {
     id: string
     policyNumber: string
@@ -25,6 +27,7 @@ export default function PoliciesPage() {
     const [loading, setLoading] = useState(true)
     const [typeFilter, setTypeFilter] = useState('')
     const [statusFilter, setStatusFilter] = useState('')
+    const [userRole, setUserRole] = useState<string | null>(null)
 
     const fetchPolicies = useCallback(async () => {
         setLoading(true)
@@ -37,7 +40,12 @@ export default function PoliciesPage() {
         setLoading(false)
     }, [typeFilter, statusFilter])
 
-    useEffect(() => { fetchPolicies() }, [fetchPolicies])
+    useEffect(() => {
+        fetch('/api/auth/session').then(r => r.json()).then(d => {
+            if (d.user) setUserRole(d.user.role)
+        }).catch(() => { })
+        fetchPolicies()
+    }, [fetchPolicies])
 
     function typeIcon(type: string) {
         return type === 'HEALTH' ? '🏥' : type === 'MOTOR' ? '🚗' : type === 'LIFE' ? '❤️' : type === 'TERM' ? '📋' : '📄'
@@ -63,14 +71,16 @@ export default function PoliciesPage() {
                         {policies.length} policies · Active Premium: ₹{Math.round(totalPremium).toLocaleString('en-IN')}
                     </p>
                 </div>
-                <Link href="/policies/new" style={{
-                    background: 'var(--gradient-primary)', color: 'white', textDecoration: 'none',
-                    padding: '10px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: 600,
-                    boxShadow: '0 0 20px rgba(99,102,241,0.3)', display: 'flex', alignItems: 'center', gap: '6px',
-                }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-                    New Policy
-                </Link>
+                {userRole !== 'AUDITOR' && (
+                    <Link href="/policies/new" style={{
+                        background: 'var(--gradient-primary)', color: 'white', textDecoration: 'none',
+                        padding: '10px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: 600,
+                        boxShadow: '0 0 20px rgba(99,102,241,0.3)', display: 'flex', alignItems: 'center', gap: '6px',
+                    }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                        New Policy
+                    </Link>
+                )}
             </div>
 
             {/* Type pills */}

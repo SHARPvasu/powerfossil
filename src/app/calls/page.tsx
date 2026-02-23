@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react'
 
+interface UserSession { id: string; name: string; email: string; role: string; }
+
 interface Call {
     id: string
     type: string
@@ -35,8 +37,12 @@ export default function CallsPage() {
     const [showForm, setShowForm] = useState(false)
     const [customers, setCustomers] = useState<{ id: string; firstName: string; lastName: string; phone: string }[]>([])
     const [form, setForm] = useState({ customerId: '', type: 'OUTGOING', duration: '', notes: '', outcome: 'INTERESTED' })
+    const [userRole, setUserRole] = useState<string | null>(null)
 
     useEffect(() => {
+        fetch('/api/auth/session').then(r => r.json()).then(d => {
+            if (d.user) setUserRole(d.user.role)
+        }).catch(() => { })
         Promise.all([
             fetch('/api/calls').then(r => r.json()),
             fetch('/api/customers?limit=100').then(r => r.json()),
@@ -79,10 +85,12 @@ export default function CallsPage() {
                     <h1 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--text-primary)' }}>Call Tracker</h1>
                     <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginTop: '4px' }}>Track all customer interactions</p>
                 </div>
-                <button onClick={() => setShowForm(true)} className="btn-glow" style={{ padding: '10px 20px', borderRadius: '10px', border: 'none', cursor: 'pointer', color: 'white', fontSize: '13px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-                    Log Call
-                </button>
+                {userRole !== 'AUDITOR' && (
+                    <button onClick={() => setShowForm(true)} className="btn-glow" style={{ padding: '10px 20px', borderRadius: '10px', border: 'none', cursor: 'pointer', color: 'white', fontSize: '13px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                        Log Call
+                    </button>
+                )}
             </div>
 
             {/* Stats Row */}

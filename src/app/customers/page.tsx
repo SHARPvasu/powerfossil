@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
+interface UserSession { id: string; name: string; email: string; role: string; }
+
 interface Policy {
     id: string
     type: string
@@ -34,6 +36,7 @@ export default function CustomersPage() {
     const [statusFilter, setStatusFilter] = useState('')
     const [page, setPage] = useState(1)
     const [pages, setPages] = useState(1)
+    const [userRole, setUserRole] = useState<string | null>(null)
 
     const fetchCustomers = useCallback(async () => {
         setLoading(true)
@@ -49,9 +52,43 @@ export default function CustomersPage() {
     }, [search, statusFilter, page])
 
     useEffect(() => {
+        fetch('/api/auth/session').then(r => r.json()).then(d => {
+            if (d.user) setUserRole(d.user.role)
+        }).catch(() => { })
+
         const t = setTimeout(fetchCustomers, 300)
         return () => clearTimeout(t)
     }, [fetchCustomers])
+
+    function downloadCsv() {
+        if (customers.length === 0) return
+
+        const headers = ['ID', 'First Name', 'Last Name', 'Phone', 'Email', 'City', 'KYC Status', 'Status', 'Agent Name', 'Created At']
+
+        const rows = customers.map(c => [
+            c.id,
+            `"${c.firstName}"`,
+            `"${c.lastName}"`,
+            `"${c.phone}"`,
+            `"${c.email || ''}"`,
+            `"${c.city || ''}"`,
+            c.kycStatus,
+            c.status,
+            `"${c.agent?.name || ''}"`,
+            new Date(c.createdAt).toLocaleDateString()
+        ])
+
+        const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.setAttribute('download', `customers_export_${new Date().toISOString().split('T')[0]}.csv`)
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+    }
 
     function kycBadge(status: string) {
         const map: Record<string, { label: string; cls: string }> = {
@@ -73,16 +110,31 @@ export default function CustomersPage() {
                         {total} total customers
                     </p>
                 </div>
-                <Link href="/customers/new" style={{
-                    background: 'var(--gradient-primary)',
-                    color: 'white', textDecoration: 'none',
-                    padding: '10px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: 600,
-                    boxShadow: '0 0 20px rgba(99,102,241,0.3)',
-                    display: 'flex', alignItems: 'center', gap: '6px',
-                }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-                    Add Customer
-                </Link>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                    {userRole === 'ADMIN' && (
+                        <button onClick={downloadCsv} style={{
+                            background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)',
+                            color: 'white', cursor: 'pointer',
+                            padding: '10px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: 600,
+                            display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s',
+                        }}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
+                            Export CSV
+                        </button>
+                    )}
+                    {userRole !== 'AUDITOR' && (
+                        <Link href="/customers/new" style={{
+                            background: 'var(--gradient-primary)',
+                            color: 'white', textDecoration: 'none',
+                            padding: '10px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: 600,
+                            boxShadow: '0 0 20px rgba(99,102,241,0.3)',
+                            display: 'flex', alignItems: 'center', gap: '6px',
+                        }}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                            Add Customer
+                        </Link>
+                    )}
+                </div>
             </div>
 
             {/* Filters */}
@@ -152,7 +204,12 @@ export default function CustomersPage() {
                                                 {c.firstName[0]}{c.lastName[0]}
                                             </div>
                                             <div>
-                                                <p style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '13px' }}>{c.firstName} {c.lastName}</p>
+                                                <p style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '13px' }}>
+                                                    {c.firstName} {c.lastName}
+                                                    {c.status === 'PENDING_APPROVAL' && (
+                                                        <span className="badge badge-pending" style={{ marginLeft: 6, fontSize: '10px', padding: '2px 6px' }}>Requires Approval</span>
+                                                    )}
+                                                </p>
                                                 {c.email && <p style={{ color: 'var(--text-muted)', fontSize: '11px' }}>{c.email}</p>}
                                             </div>
                                         </div>

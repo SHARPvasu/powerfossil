@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 
+interface UserSession { id: string; name: string; email: string; role: string; }
+
 interface Policy {
     id: string
     policyNumber: string
@@ -49,8 +51,13 @@ export default function PolicyDetailPage() {
     const [editing, setEditing] = useState(false)
     const [editForm, setEditForm] = useState<Partial<Policy>>({})
     const [saving, setSaving] = useState(false)
+    const [userRole, setUserRole] = useState<string | null>(null)
 
     useEffect(() => {
+        fetch('/api/auth/session').then(r => r.json()).then(d => {
+            if (d.user) setUserRole(d.user.role)
+        }).catch(() => { })
+
         fetch(`/api/policies/${id}`)
             .then(r => r.json())
             .then(d => { setPolicy(d.policy); setEditForm(d.policy); setLoading(false) })
@@ -135,12 +142,16 @@ export default function PolicyDetailPage() {
                             <Link href={`/customers/${policy.customer.id}`} style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--border)', color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 600, textDecoration: 'none' }}>
                                 View Customer →
                             </Link>
-                            <button onClick={() => setEditing(true)} style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--border)', cursor: 'pointer', color: 'var(--text-secondary)', background: 'none', fontSize: '12px', fontWeight: 600 }}>
-                                ✏️ Edit
-                            </button>
-                            <button onClick={deletePolicy} style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid rgba(239,68,68,0.3)', cursor: 'pointer', color: '#ef4444', background: 'rgba(239,68,68,0.08)', fontSize: '12px', fontWeight: 600 }}>
-                                Delete
-                            </button>
+                            {userRole !== 'AUDITOR' && (
+                                <>
+                                    <button onClick={() => setEditing(true)} style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--border)', cursor: 'pointer', color: 'var(--text-secondary)', background: 'none', fontSize: '12px', fontWeight: 600 }}>
+                                        ✏️ Edit
+                                    </button>
+                                    <button onClick={deletePolicy} style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid rgba(239,68,68,0.3)', cursor: 'pointer', color: '#ef4444', background: 'rgba(239,68,68,0.08)', fontSize: '12px', fontWeight: 600 }}>
+                                        Delete
+                                    </button>
+                                </>
+                            )}
                         </>
                     )}
                 </div>
@@ -318,12 +329,14 @@ export default function PolicyDetailPage() {
                         <a href={`tel:${policy.customer.phone}`} style={{ padding: '9px 18px', borderRadius: '8px', background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.25)', color: '#10b981', fontSize: '13px', fontWeight: 600, textDecoration: 'none' }}>
                             📞 Call Now
                         </a>
-                        <button onClick={() => {
-                            setEditForm(prev => ({ ...prev, status: 'RENEWED' }))
-                            setEditing(true)
-                        }} style={{ padding: '9px 18px', borderRadius: '8px', background: 'var(--gradient-primary)', border: 'none', cursor: 'pointer', color: 'white', fontSize: '13px', fontWeight: 600 }}>
-                            ♻️ Mark Renewed
-                        </button>
+                        {userRole !== 'AUDITOR' && (
+                            <button onClick={() => {
+                                setEditForm(prev => ({ ...prev, status: 'RENEWED' }))
+                                setEditing(true)
+                            }} style={{ padding: '9px 18px', borderRadius: '8px', background: 'var(--gradient-primary)', border: 'none', cursor: 'pointer', color: 'white', fontSize: '13px', fontWeight: 600 }}>
+                                ♻️ Mark Renewed
+                            </button>
+                        )}
                     </div>
                 </div>
             )}

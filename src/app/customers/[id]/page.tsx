@@ -3,6 +3,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
+
+interface UserSession { id: string; name: string; email: string; role: string; }
 
 interface FamilyMember { id: string; name: string; relation: string; dob: string; gender: string; preExisting: string; insured: boolean }
 interface Note { id: string; content: string; type: string; createdAt: string; agent: { name: string } }
@@ -27,6 +31,7 @@ export default function CustomerDetailPage() {
     const [editing, setEditing] = useState(false)
     const [editForm, setEditForm] = useState<Partial<Customer>>({})
     const [saving, setSaving] = useState(false)
+    const [userRole, setUserRole] = useState<string | null>(null)
 
     // Note form
     const [noteContent, setNoteContent] = useState('')
@@ -42,11 +47,34 @@ export default function CustomerDetailPage() {
     const [familyForm, setFamilyForm] = useState({ name: '', relation: '', dob: '', gender: '', preExisting: '', insured: false })
 
     useEffect(() => {
+        // Fetch session first
+        fetch('/api/auth/session').then(r => r.json()).then(d => {
+            if (d.user) setUserRole(d.user.role)
+        }).catch(() => { })
+
         fetch(`/api/customers/${id}`)
             .then(r => r.json())
             .then(d => { setCustomer(d.customer); setEditForm(d.customer); setLoading(false) })
             .catch(() => setLoading(false))
     }, [id])
+
+    async function handleApproval(action: 'APPROVE' | 'REJECT', type: 'CUSTOMER' | 'KYC') {
+        const res = await fetch('/api/admin/approve', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, action, type }),
+        })
+        if (res.ok) {
+            setCustomer(prev => {
+                if (!prev) return prev;
+                return {
+                    ...prev,
+                    status: type === 'CUSTOMER' ? (action === 'APPROVE' ? 'ACTIVE' : 'REJECTED') : prev.status,
+                    kycStatus: type === 'KYC' ? (action === 'APPROVE' ? 'VERIFIED' : 'REJECTED') : prev.kycStatus
+                }
+            })
+        }
+    }
 
     async function saveEdit() {
         setSaving(true)
@@ -109,6 +137,82 @@ export default function CustomerDetailPage() {
         setCustomer(prev => prev ? { ...prev, notes: prev.notes.filter(n => n.id !== noteId) } : prev)
     }
 
+    function downloadPdf() {
+        if (!customer) return
+
+        const doc = new jsPDF()
+        const primaryColor = [99, 102, 241] as [number, number, number]
+
+        // Header
+        doc.setFontSize(22)
+        doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2])
+        doc.text('UV Insurance Agency', 14, 20)
+
+        doc.setFontSize(14)
+        doc.setTextColor(40, 40, 40)
+        doc.text('Customer Profile', 14, 30)
+
+        // Basic Info
+        doc.setFontSize(12)
+        doc.setTextColor(100, 100, 100)
+        doc.text(`Name: ${customer.firstName} ${customer.lastName}`, 14, 45)
+        doc.text(`Phone: ${customer.phone}`, 14, 52)
+        doc.text(`Email: ${customer.email || 'N/A'}`, 14, 59)
+        doc.text(`DOB: ${customer.dob || 'N/A'}`, 14, 66)
+        doc.text(`Address: ${customer.address || ''}, ${customer.city || ''} ${customer.pincode || ''}`, 14, 73)
+
+        doc.text(`KYC Status: ${customer.kycStatus}`, 120, 45)
+        doc.text(`Agent: ${customer.agent?.name || 'N/A'}`, 120, 52)
+
+        // Policies Table
+        let yPos = 90
+        if (customer.policies.length > 0) {
+            doc.setFontSize(14)
+            doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2])
+            doc.text('Active Policies', 14, yPos)
+
+            autoTable(doc, {
+                startY: yPos + 5,
+                head: [['Policy No', 'Type', 'Company', 'Plan', 'Premium', 'Status']],
+                body: customer.policies.map(p => [
+                    p.policyNumber, p.type, p.company, p.planName, `Rs. ${p.premium}`, p.status
+                ]),
+                theme: 'striped',
+                headStyles: { fillColor: primaryColor }
+            })
+            yPos = (doc as any).lastAutoTable.finalY + 15
+        }
+
+        // Family Members Table
+        if (customer.family.length > 0) {
+            doc.setFontSize(14)
+            doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2])
+            doc.text('Family Members', 14, yPos)
+
+            autoTable(doc, {
+                startY: yPos + 5,
+                head: [['Name', 'Relation', 'DOB', 'Pre-Existing', 'Insured']],
+                body: customer.family.map(f => [
+                    f.name, f.relation, f.dob || 'N/A', f.preExisting || 'None', f.insured ? 'Yes' : 'No'
+                ]),
+                theme: 'striped',
+                headStyles: { fillColor: primaryColor }
+            })
+        }
+
+        // Footer
+        const pageCount = (doc as any).internal.getNumberOfPages()
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i)
+            doc.setFontSize(10)
+            doc.setTextColor(150, 150, 150)
+            doc.text(`Generated on ${new Date().toLocaleDateString('en-IN')}`, 14, 290)
+            doc.text(`Page ${i} of ${pageCount}`, 180, 290)
+        }
+
+        doc.save(`${customer.firstName}_${customer.lastName}_Profile.pdf`)
+    }
+
     if (loading) {
         return (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
@@ -120,7 +224,19 @@ export default function CustomerDetailPage() {
 
     if (!customer) return <div style={{ padding: '32px', color: 'var(--text-muted)' }}>Customer not found.</div>
 
-    const preExisting: string[] = customer.preExisting ? JSON.parse(customer.preExisting) : []
+    let preExistingConditions: string[] = []
+    let preExistingNotes: string = ''
+    if (customer.preExisting) {
+        try {
+            const parsed = JSON.parse(customer.preExisting)
+            if (Array.isArray(parsed)) {
+                preExistingConditions = parsed
+            } else if (parsed && typeof parsed === 'object') {
+                preExistingConditions = parsed.conditions || []
+                preExistingNotes = parsed.notes || ''
+            }
+        } catch (e) { }
+    }
     const activePolicies = customer.policies.filter(p => p.status === 'ACTIVE')
 
     const inputCls: React.CSSProperties = {
@@ -147,6 +263,7 @@ export default function CustomerDetailPage() {
                             {customer.email && <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>✉️ {customer.email}</span>}
                             <span className={`badge badge-${customer.kycStatus === 'VERIFIED' ? 'active' : customer.kycStatus === 'REJECTED' ? 'expired' : 'pending'}`}>{customer.kycStatus}</span>
                             <span style={{ fontSize: '11px', color: 'var(--text-muted)', padding: '2px 8px', background: 'rgba(255,255,255,0.04)', borderRadius: 6 }}>{activePolicies.length} Active Policies</span>
+                            {customer.status === 'PENDING_APPROVAL' && <span className="badge badge-pending">Approval Required</span>}
                         </div>
                     </div>
                 </div>
@@ -158,14 +275,34 @@ export default function CustomerDetailPage() {
                         </>
                     ) : (
                         <>
-                            <button onClick={() => setEditing(true)} style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--border)', cursor: 'pointer', color: 'var(--text-secondary)', background: 'none', fontSize: '12px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
-                                Edit
-                            </button>
-                            <Link href={`/policies/new?customerId=${id}`} className="btn-glow" style={{ padding: '8px 18px', borderRadius: '8px', color: 'white', fontSize: '12px', fontWeight: 600, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-                                Add Policy
-                            </Link>
+                            {userRole === 'ADMIN' && (
+                                <button onClick={downloadPdf} style={{
+                                    marginRight: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)',
+                                    color: 'white', cursor: 'pointer', padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 600,
+                                    display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s',
+                                }}>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
+                                    Export PDF
+                                </button>
+                            )}
+                            {userRole === 'ADMIN' && customer.status === 'PENDING_APPROVAL' && (
+                                <div style={{ display: 'flex', gap: '8px', marginRight: '12px' }}>
+                                    <button onClick={() => handleApproval('APPROVE', 'CUSTOMER')} className="badge badge-active" style={{ border: 'none', cursor: 'pointer', padding: '6px 12px' }}>Approve Profile</button>
+                                    <button onClick={() => handleApproval('REJECT', 'CUSTOMER')} className="badge badge-expired" style={{ border: 'none', cursor: 'pointer', padding: '6px 12px' }}>Reject</button>
+                                </div>
+                            )}
+                            {userRole !== 'AUDITOR' && (
+                                <>
+                                    <button onClick={() => setEditing(true)} style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--border)', cursor: 'pointer', color: 'var(--text-secondary)', background: 'none', fontSize: '12px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+                                        Edit
+                                    </button>
+                                    <Link href={`/policies/new?customerId=${id}`} className="btn-glow" style={{ padding: '8px 18px', borderRadius: '8px', color: 'white', fontSize: '12px', fontWeight: 600, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                                        Add Policy
+                                    </Link>
+                                </>
+                            )}
                         </>
                     )}
                 </div>
@@ -248,14 +385,24 @@ export default function CustomerDetailPage() {
                         </div>
 
                         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '14px', padding: '20px' }}>
-                            <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '12px' }}>Pre-Existing Conditions</h3>
-                            {preExisting.length === 0 ? (
+                            <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '12px' }}>Pre-Existing Conditions & Health Notes</h3>
+                            {preExistingConditions.length === 0 && !preExistingNotes ? (
                                 <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>None declared</p>
                             ) : (
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                                    {preExisting.map(c => (
-                                        <span key={c} style={{ padding: '4px 12px', borderRadius: 999, background: 'rgba(239,68,68,0.1)', color: '#ef4444', fontSize: '12px', fontWeight: 500, border: '1px solid rgba(239,68,68,0.2)' }}>{c}</span>
-                                    ))}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                    {preExistingConditions.length > 0 && (
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                            {preExistingConditions.map(c => (
+                                                <span key={c} style={{ padding: '4px 12px', borderRadius: 999, background: 'rgba(239,68,68,0.1)', color: '#ef4444', fontSize: '12px', fontWeight: 500, border: '1px solid rgba(239,68,68,0.2)' }}>{c}</span>
+                                            ))}
+                                        </div>
+                                    )}
+                                    {preExistingNotes && (
+                                        <div style={{ background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                            <p style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Custom Notes</p>
+                                            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{preExistingNotes}</p>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -276,7 +423,7 @@ export default function CustomerDetailPage() {
                 <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
                         <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)' }}>Policies ({customer.policies.length})</h3>
-                        <Link href={`/policies/new?customerId=${id}`} className="btn-glow" style={{ padding: '8px 16px', borderRadius: '8px', color: 'white', fontSize: '12px', fontWeight: 600, textDecoration: 'none' }}>+ Add Policy</Link>
+                        {userRole !== 'AUDITOR' && <Link href={`/policies/new?customerId=${id}`} className="btn-glow" style={{ padding: '8px 16px', borderRadius: '8px', color: 'white', fontSize: '12px', fontWeight: 600, textDecoration: 'none' }}>+ Add Policy</Link>}
                     </div>
                     {customer.policies.length === 0 ? (
                         <div style={{ padding: '40px', textAlign: 'center', background: 'var(--bg-card)', borderRadius: '14px', border: '1px solid var(--border)' }}>
@@ -326,7 +473,7 @@ export default function CustomerDetailPage() {
                 <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
                         <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)' }}>Family Members ({customer.family.length})</h3>
-                        <button onClick={() => setShowFamilyForm(true)} className="btn-glow" style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', cursor: 'pointer', color: 'white', fontSize: '12px', fontWeight: 600 }}>+ Add Member</button>
+                        {userRole !== 'AUDITOR' && <button onClick={() => setShowFamilyForm(true)} className="btn-glow" style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', cursor: 'pointer', color: 'white', fontSize: '12px', fontWeight: 600 }}>+ Add Member</button>}
                     </div>
                     {customer.family.length === 0 ? (
                         <div style={{ padding: '40px', textAlign: 'center', background: 'var(--bg-card)', borderRadius: '14px', border: '1px solid var(--border)' }}>
@@ -369,12 +516,12 @@ export default function CustomerDetailPage() {
                                     ].map(f => (
                                         <div key={f.key}>
                                             <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>{f.label}</label>
-                                            <input 
-                                                type={f.type || 'text'} 
-                                                style={inputCls} 
-                                                value={String((familyForm as any)[f.key] || '')} 
-                                                onChange={e => setFamilyForm(p => ({ ...p, [f.key]: e.target.value }))} 
-                                                placeholder={(f as { placeholder?: string }).placeholder} 
+                                            <input
+                                                type={f.type || 'text'}
+                                                style={inputCls}
+                                                value={String((familyForm as any)[f.key] || '')}
+                                                onChange={e => setFamilyForm(p => ({ ...p, [f.key]: e.target.value }))}
+                                                placeholder={(f as { placeholder?: string }).placeholder}
                                             />
                                         </div>
                                     ))}
@@ -399,24 +546,26 @@ export default function CustomerDetailPage() {
                     {/* Notes */}
                     <div>
                         <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '14px' }}>Notes</h3>
-                        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '16px', marginBottom: '14px' }}>
-                            <textarea
-                                value={noteContent} onChange={e => setNoteContent(e.target.value)}
-                                placeholder="Add a note about this customer..."
-                                style={{ ...inputCls, resize: 'none', height: '80px', borderRadius: '8px', marginBottom: '10px' }}
-                            />
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <select style={{ ...inputCls, width: '140px' }} value={noteType} onChange={e => setNoteType(e.target.value)}>
-                                    <option value="GENERAL">General</option>
-                                    <option value="FOLLOWUP">Follow-up</option>
-                                    <option value="COMPLAINT">Complaint</option>
-                                    <option value="RENEWAL">Renewal</option>
-                                </select>
-                                <button onClick={addNote} disabled={addingNote || !noteContent.trim()} className="btn-glow" style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', cursor: 'pointer', color: 'white', fontSize: '12px', fontWeight: 600, opacity: noteContent.trim() ? 1 : 0.5 }}>
-                                    {addingNote ? 'Adding...' : '+ Add Note'}
-                                </button>
+                        {userRole !== 'AUDITOR' && (
+                            <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '16px', marginBottom: '14px' }}>
+                                <textarea
+                                    value={noteContent} onChange={e => setNoteContent(e.target.value)}
+                                    placeholder="Add a note about this customer..."
+                                    style={{ ...inputCls, resize: 'none', height: '80px', borderRadius: '8px', marginBottom: '10px' }}
+                                />
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <select style={{ ...inputCls, width: '140px' }} value={noteType} onChange={e => setNoteType(e.target.value)}>
+                                        <option value="GENERAL">General</option>
+                                        <option value="FOLLOWUP">Follow-up</option>
+                                        <option value="COMPLAINT">Complaint</option>
+                                        <option value="RENEWAL">Renewal</option>
+                                    </select>
+                                    <button onClick={addNote} disabled={addingNote || !noteContent.trim()} className="btn-glow" style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', cursor: 'pointer', color: 'white', fontSize: '12px', fontWeight: 600, opacity: noteContent.trim() ? 1 : 0.5 }}>
+                                        {addingNote ? 'Adding...' : '+ Add Note'}
+                                    </button>
+                                </div>
                             </div>
-                        </div>
+                        )}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '400px', overflowY: 'auto' }}>
                             {customer.notes.length === 0 ? <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>No notes yet.</p> : customer.notes.map(n => (
                                 <div key={n.id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '10px', padding: '14px' }}>
@@ -424,7 +573,7 @@ export default function CustomerDetailPage() {
                                         <span style={{ fontSize: '10px', padding: '2px 8px', borderRadius: 999, background: n.type === 'FOLLOWUP' ? 'rgba(99,102,241,0.15)' : n.type === 'COMPLAINT' ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.1)', color: n.type === 'COMPLAINT' ? '#ef4444' : n.type === 'FOLLOWUP' ? 'var(--accent-blue)' : 'var(--accent-green)', fontWeight: 600 }}>{n.type}</span>
                                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                                             <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{n.agent.name}</span>
-                                            <button onClick={() => deleteNote(n.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '12px' }}>×</button>
+                                            {userRole !== 'AUDITOR' && <button onClick={() => deleteNote(n.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '12px' }}>×</button>}
                                         </div>
                                     </div>
                                     <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>{n.content}</p>
@@ -438,7 +587,7 @@ export default function CustomerDetailPage() {
                     <div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '14px', alignItems: 'center' }}>
                             <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)' }}>Call Logs</h3>
-                            <button onClick={() => setShowCallForm(true)} style={{ padding: '6px 14px', borderRadius: '8px', border: '1px solid rgba(99,102,241,0.3)', cursor: 'pointer', color: 'var(--accent-blue)', background: 'rgba(99,102,241,0.08)', fontSize: '12px', fontWeight: 600 }}>+ Log Call</button>
+                            {userRole !== 'AUDITOR' && <button onClick={() => setShowCallForm(true)} style={{ padding: '6px 14px', borderRadius: '8px', border: '1px solid rgba(99,102,241,0.3)', cursor: 'pointer', color: 'var(--accent-blue)', background: 'rgba(99,102,241,0.08)', fontSize: '12px', fontWeight: 600 }}>+ Log Call</button>}
                         </div>
                         {showCallForm && (
                             <div style={{ background: 'var(--bg-card)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '12px', padding: '16px', marginBottom: '14px' }}>
@@ -502,7 +651,15 @@ export default function CustomerDetailPage() {
             {tab === 'KYC' && (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                     <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '14px', padding: '24px' }}>
-                        <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '16px' }}>KYC Details</h3>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                            <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>KYC Details</h3>
+                            {userRole === 'ADMIN' && customer.kycStatus === 'PENDING' && (
+                                <div style={{ display: 'flex', gap: '6px' }}>
+                                    <button onClick={() => handleApproval('APPROVE', 'KYC')} className="badge badge-active" style={{ border: 'none', cursor: 'pointer' }}>Approve KYC</button>
+                                    <button onClick={() => handleApproval('REJECT', 'KYC')} className="badge badge-expired" style={{ border: 'none', cursor: 'pointer' }}>Reject KYC</button>
+                                </div>
+                            )}
+                        </div>
                         {editing ? (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                 {[
@@ -545,10 +702,12 @@ export default function CustomerDetailPage() {
                             {['Aadhar Front', 'Aadhar Back', 'PAN Card', 'Photo'].map(doc => (
                                 <div key={doc} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)' }}>
                                     <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>📄 {doc}</span>
-                                    <label style={{ padding: '5px 12px', borderRadius: '6px', border: '1px solid rgba(99,102,241,0.3)', cursor: 'pointer', color: 'var(--accent-blue)', fontSize: '11px', fontWeight: 600 }}>
-                                        Upload
-                                        <input type="file" accept="image/*" style={{ display: 'none' }} />
-                                    </label>
+                                    {userRole !== 'AUDITOR' && (
+                                        <label style={{ padding: '5px 12px', borderRadius: '6px', border: '1px solid rgba(99,102,241,0.3)', cursor: 'pointer', color: 'var(--accent-blue)', fontSize: '11px', fontWeight: 600 }}>
+                                            Upload
+                                            <input type="file" accept="image/*" style={{ display: 'none' }} />
+                                        </label>
+                                    )}
                                 </div>
                             ))}
                         </div>

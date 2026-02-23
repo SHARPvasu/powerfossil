@@ -50,7 +50,7 @@ export default function SetupPage() {
     }} className="animated-bg">
       <div style={{ width: '100%', maxWidth: '920px' }}>
         <div style={{ marginBottom: '32px' }}>
-          <h1 style={{ fontSize: '32px', fontWeight: 800, color: 'var(--text-primary)' }}>PowerFossil Setup</h1>
+          <h1 style={{ fontSize: '32px', fontWeight: 800, color: 'var(--text-primary)' }}>UV Insurance Agency Setup</h1>
           <p style={{ marginTop: '8px', color: 'var(--text-muted)' }}>
             Use this checklist to confirm your database and authentication configuration before onboarding agents.
           </p>
@@ -112,8 +112,8 @@ export default function SetupPage() {
           <div className="glass-card" style={{ padding: '20px', borderRadius: '16px' }}>
             <h2 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)' }}>Demo Accounts</h2>
             <div style={{ marginTop: '12px', fontSize: '13px', color: 'var(--text-muted)' }}>
-              <p><strong>Admin:</strong> admin@powerfossil.in / admin123</p>
-              <p style={{ marginTop: '6px' }}><strong>Agent:</strong> agent@powerfossil.in / agent123</p>
+              <p><strong>Admin:</strong> admin@uvinsurance.in / admin123</p>
+              <p style={{ marginTop: '6px' }}><strong>Agent:</strong> agent@uvinsurance.in / agent123</p>
             </div>
           </div>
         </div>

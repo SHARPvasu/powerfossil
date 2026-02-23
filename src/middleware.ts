@@ -34,6 +34,13 @@ export async function middleware(req: NextRequest) {
         return NextResponse.redirect(new URL('/dashboard', req.url))
     }
 
+    // Auditor restrictions
+    if (payload.role === 'AUDITOR') {
+        if (path === '/customers/new' || path === '/policies/new' || path === '/setup') {
+            return NextResponse.redirect(new URL('/dashboard', req.url))
+        }
+    }
+
     return NextResponse.next()
 }
 

@@ -35,16 +35,44 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     const session = await getSession()
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (session.role === 'AUDITOR') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const { id } = await params
     const data = await req.json()
     // Strip read-only and relation fields
     const { id: _id, createdAt, updatedAt, agent, policies, family, notes, callLogs, proposerFor, ...updateData } = data
     void _id; void createdAt; void updatedAt; void agent; void policies; void family; void notes; void callLogs; void proposerFor;
+
+    // Check if kycStatus is becoming PENDING from a previous state and an AGENT is doing it
+    let notifyKyc = false;
+    if (session.role === 'AGENT' && updateData.kycStatus === 'PENDING') {
+        const existing = await prisma.customer.findUnique({ where: { id }, select: { kycStatus: true, firstName: true, lastName: true } });
+        if (existing && existing.kycStatus !== 'PENDING') {
+            notifyKyc = true;
+            // Temporarily store name for notification
+            updateData._tempName = `${existing.firstName} ${existing.lastName}`;
+        }
+    }
+
+    const { _tempName, ...finalUpdateData } = updateData;
+
     const customer = await prisma.customer.update({
         where: { id },
-        data: updateData,
+        data: finalUpdateData,
     })
+
+    if (notifyKyc && _tempName) {
+        await prisma.notification.create({
+            data: {
+                title: 'KYC Approval Required',
+                message: `Agent ${session.name} submitted KYC documents for customer: ${_tempName}`,
+                type: 'APPROVAL',
+                targetId: customer.id,
+                targetType: 'CUSTOMER'
+            }
+        })
+    }
+
     return NextResponse.json({ customer })
 }
 

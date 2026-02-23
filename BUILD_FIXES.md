@@ -1,4 +1,4 @@
-# PowerFossil - Build Fixes Summary
+# UV Insurance Agency - Build Fixes Summary
 
 ## ✅ All Critical Issues Resolved
 
@@ -104,8 +104,8 @@
 5. Seed database: `npm run db:seed`
 
 ### 🔑 Demo Credentials (after seeding)
-- **Admin:** admin@powerfossil.in / admin123
-- **Agent:** agent@powerfossil.in / agent123
+- **Admin:** admin@UV Insurance Agency.in / admin123
+- **Agent:** agent@UV Insurance Agency.in / agent123
 
 ## Technical Improvements
 

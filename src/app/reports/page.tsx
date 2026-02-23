@@ -41,7 +41,7 @@ export default function ReportsPage() {
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
-        a.download = `powerfossil-policies-${new Date().toISOString().split('T')[0]}.csv`
+        a.download = `uv-insurance-policies-${new Date().toISOString().split('T')[0]}.csv`
         a.click()
         URL.revokeObjectURL(url)
     }

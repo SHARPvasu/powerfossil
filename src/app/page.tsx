@@ -138,7 +138,7 @@ export default function LoginPage() {
             <span style={{ fontSize: '22px', fontWeight: 900, color: 'white', letterSpacing: '-1px', fontFamily: 'Inter, sans-serif' }}>UV</span>
           </div>
           <h1 style={{ fontSize: '30px', fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '-0.5px' }}>
-            Power<span className="gradient-text">Fossil</span>
+            UV Insurance <span className="gradient-text">Agency</span>
           </h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginTop: '4px' }}>Insurance Management System</p>
         </div>
@@ -175,7 +175,7 @@ export default function LoginPage() {
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   style={{ ...inputBase, paddingLeft: '40px' }}
-                  placeholder="agent@powerfossil.in"
+                  placeholder="agent@uvinsurance.in"
                   required
                   disabled={isLocked}
                   autoComplete="email"
@@ -315,19 +315,24 @@ export default function LoginPage() {
             <p style={{ fontSize: '11px', fontWeight: 700, color: 'var(--accent-blue)', marginBottom: '8px', letterSpacing: '0.5px' }}>DEMO CREDENTIALS</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               {[
-                { role: 'Admin', email: 'admin@powerfossil.in', pass: 'admin123' },
-                { role: 'Agent', email: 'agent@powerfossil.in', pass: 'agent123' },
+                { role: 'Admin', email: 'admin@uvinsurance.in', pass: 'admin123', color: '#6366f1', bg: 'rgba(99,102,241,0.12)' },
+                { role: 'Agent', email: 'agent@uvinsurance.in', pass: 'agent123', color: '#06b6d4', bg: 'rgba(6,182,212,0.10)' },
+                { role: 'Auditor', email: 'auditor@uvinsurance.in', pass: 'auditor123', color: '#8b5cf6', bg: 'rgba(139,92,246,0.10)' },
               ].map(cred => (
                 <button
                   key={cred.role}
                   type="button"
                   onClick={() => { setEmail(cred.email); setPassword(cred.pass); setError('') }}
-                  style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', borderRadius: '8px', padding: '6px 12px', cursor: 'pointer', textAlign: 'left', transition: 'background 0.2s ease' }}
-                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(99,102,241,0.08)')}
+                  style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', borderRadius: '8px', padding: '7px 12px', cursor: 'pointer', textAlign: 'left', transition: 'background 0.2s ease', display: 'flex', alignItems: 'center', gap: '8px' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = cred.bg)}
                   onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.03)')}
                 >
+                  <span style={{ fontSize: '10px', fontWeight: 700, color: cred.color, background: `${cred.bg}`, border: `1px solid ${cred.color}33`, borderRadius: '5px', padding: '2px 7px', letterSpacing: '0.5px', flexShrink: 0 }}>
+                    {cred.role.toUpperCase()}
+                  </span>
                   <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 500 }}>
-                    <span style={{ color: 'var(--accent-blue)', fontWeight: 700 }}>{cred.role}:</span> {cred.email}
+                    {cred.email}
+                    <span style={{ color: 'var(--text-muted)', marginLeft: '6px' }}>/ {cred.pass}</span>
                   </span>
                 </button>
               ))}
@@ -336,7 +341,7 @@ export default function LoginPage() {
         </div>
 
         <p style={{ textAlign: 'center', fontSize: '11px', marginTop: '20px', color: 'var(--text-muted)' }}>
-          PowerFossil © 2026 · Secure Insurance Platform
+          UV Insurance Agency © 2026 · Secure Insurance Platform
         </p>
       </div>
 
