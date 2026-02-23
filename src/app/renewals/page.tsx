@@ -134,6 +134,15 @@ export default function RenewalsPage() {
                                     </div>
                                     <div style={{ display: 'flex', gap: '8px' }}>
                                         {pol.customer.phone && (
+                                            <a href={`https://wa.me/${pol.customer.phone.replace(/[\s+-]/g, '').length === 10 ? '91' + pol.customer.phone.replace(/[\s+-]/g, '') : pol.customer.phone.replace(/[\s+-]/g, '')}?text=${encodeURIComponent(`Hi ${pol.customer.firstName},\n\nThis is a gentle reminder regarding your ${pol.company} ${pol.type} policy (No: ${pol.policyNumber}).\n\nIt is due for renewal on ${new Date(pol.endDate).toLocaleDateString('en-IN')}. Please let me know a good time to connect so we can process this before it expires and ensure continuous coverage!\n\nThanks,\nUV Insurance`)}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                style={{ padding: '7px 12px', borderRadius: '8px', background: 'rgba(37,211,102,0.1)', border: '1px solid rgba(37,211,102,0.2)', color: '#25D366', fontSize: '12px', fontWeight: 600, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" /></svg>
+                                                WhatsApp
+                                            </a>
+                                        )}
+                                        {pol.customer.phone && (
                                             <a href={`tel:${pol.customer.phone}`} style={{ padding: '7px 12px', borderRadius: '8px', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', color: '#10b981', fontSize: '12px', fontWeight: 600, textDecoration: 'none' }}>
                                                 📞 Call
                                             </a>

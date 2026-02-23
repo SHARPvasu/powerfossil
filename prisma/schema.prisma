@@ -43,6 +43,8 @@ model Customer {
   pincode     String?
   occupation  String?
   income      String?
+  height      String?
+  weight      String?
   // KYC
   aadharNo    String?
   panNo       String?
@@ -129,6 +131,8 @@ model Document {
   type        String
   url         String
   size        Int?
+  uploadedAt  DateTime @default(now())
+  lastDownloadedAt DateTime?
   createdAt   DateTime @default(now())
 
   policy      Policy   @relation(fields: [policyId], references: [id], onDelete: Cascade)
@@ -169,4 +173,13 @@ model Notification {
   targetType  String?
   isRead      Boolean  @default(false)
   createdAt   DateTime @default(now())
+}
+
+model OTPVerification {
+  id        String   @id @default(cuid())
+  target    String   // could be an email (e.g., test@test.com) or a phone number
+  code      String   // the 6-digit string
+  expiresAt DateTime // the timestamp this OTP becomes invalid
+  verified  Boolean  @default(false) // becomes true once the user enters it correctly
+  createdAt DateTime @default(now())
 }

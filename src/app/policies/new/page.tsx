@@ -155,7 +155,24 @@ function NewPolicyForm() {
         nominee: '',
         nomineeRelation: '',
         tags: '',
+        externalPolicyDoc: '', // Base64 string of the uploaded document
     })
+
+    async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+        const file = e.target.files?.[0]
+        if (!file) return
+
+        if (file.size > 1.5 * 1024 * 1024) {
+            alert("File size must be less than 1.5MB")
+            return
+        }
+
+        const reader = new FileReader()
+        reader.onloadend = () => {
+            setForm(prev => ({ ...prev, externalPolicyDoc: reader.result as string }))
+        }
+        reader.readAsDataURL(file)
+    }
 
     function updateField(k: string, v: string) {
         setForm(p => {
@@ -403,6 +420,24 @@ function NewPolicyForm() {
                                     <option value="EXPIRED">Expired</option>
                                     <option value="CANCELLED">Cancelled</option>
                                 </select>
+                            </div>
+
+                            {/* External Document Upload */}
+                            <div style={{ gridColumn: 'span 2', marginTop: '8px', padding: '16px', background: 'rgba(99, 102, 241, 0.05)', borderRadius: '12px', border: '1px dashed rgba(99, 102, 241, 0.3)' }}>
+                                <label style={{ ...lbl, color: 'var(--accent-blue)', display: 'flex', justifyContent: 'space-between' }}>
+                                    <span>External Policy Document</span>
+                                    {form.externalPolicyDoc && <span style={{ color: '#10b981' }}>✓ Uploaded</span>}
+                                </label>
+                                <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>Attach the master PDF or Image of the policy (Max 1.5MB)</p>
+                                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                                    <label style={{ padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', background: 'var(--bg-elevated)', border: '1px solid var(--border)', fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                                        {form.externalPolicyDoc ? 'Change File' : 'Choose File'}
+                                        <input type="file" accept="image/*,application/pdf" onChange={handleFileUpload} style={{ display: 'none' }} />
+                                    </label>
+                                    {form.externalPolicyDoc && (
+                                        <button type="button" onClick={() => setForm(p => ({ ...p, externalPolicyDoc: '' }))} style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>Remove</button>
+                                    )}
+                                </div>
                             </div>
 
                             {/* Dates */}

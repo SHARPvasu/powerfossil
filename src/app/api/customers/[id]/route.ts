@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getSession } from '@/lib/auth'
+import { uploadImage } from '@/lib/cloudinary'
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     const session = await getSession()
@@ -52,6 +53,25 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
             // Temporarily store name for notification
             updateData._tempName = `${existing.firstName} ${existing.lastName}`;
         }
+    }
+
+    // Handle Image Uploads for Updates
+    try {
+        if (updateData.livePhoto && updateData.livePhoto.startsWith('data:image')) {
+            updateData.livePhoto = await uploadImage(updateData.livePhoto, 'customers')
+        }
+        if (updateData.aadharFront && updateData.aadharFront.startsWith('data:image')) {
+            updateData.aadharFront = await uploadImage(updateData.aadharFront, 'customers/kyc')
+        }
+        if (updateData.aadharBack && updateData.aadharBack.startsWith('data:image')) {
+            updateData.aadharBack = await uploadImage(updateData.aadharBack, 'customers/kyc')
+        }
+        if (updateData.panPhoto && updateData.panPhoto.startsWith('data:image')) {
+            updateData.panPhoto = await uploadImage(updateData.panPhoto, 'customers/kyc')
+        }
+    } catch (uploadError) {
+        console.error("Cloudinary upload failed during customer update:", uploadError)
+        return NextResponse.json({ error: 'Failed to upload one or more documents' }, { status: 500 })
     }
 
     const { _tempName, ...finalUpdateData } = updateData;

@@ -286,21 +286,61 @@ export default function PolicyDetailPage() {
 
                     {/* Documents */}
                     <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '14px', padding: '22px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', alignItems: 'center' }}>
-                            <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>Documents</h3>
-                            <label style={{ padding: '5px 12px', borderRadius: '6px', border: '1px solid rgba(99,102,241,0.3)', cursor: 'pointer', color: 'var(--accent-blue)', fontSize: '11px', fontWeight: 600 }}>
-                                + Upload
-                                <input type="file" style={{ display: 'none' }} />
-                            </label>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px', alignItems: 'center' }}>
+                            <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>Attached Documents</h3>
                         </div>
                         {policy.documents.length === 0 ? (
-                            <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>No documents uploaded.</p>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '24px', background: 'rgba(255,255,255,0.02)', borderRadius: '10px', border: '1px dashed var(--border)' }}>
+                                <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>No policy document uploaded yet.</p>
+                            </div>
                         ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                 {policy.documents.map(doc => (
-                                    <div key={doc.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)' }}>
-                                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>📄 {doc.name}</span>
-                                        <a href={doc.url} download style={{ color: 'var(--accent-blue)', fontSize: '11px', textDecoration: 'none', fontWeight: 600 }}>Download</a>
+                                    <div key={doc.id} style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', padding: '16px', borderRadius: '10px', background: 'rgba(99, 102, 241, 0.05)', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                            <span style={{ fontSize: '20px' }}>📄</span>
+                                            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{doc.name}</span>
+                                        </div>
+                                        {userRole === 'ADMIN' ? (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
+                                                <div style={{ display: 'flex', gap: '8px' }}>
+                                                    <a
+                                                        href={doc.url}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        onClick={async () => {
+                                                            await fetch(`/api/documents/${doc.id}/track-download`, { method: 'POST' })
+                                                        }}
+                                                        style={{ padding: '6px 12px', borderRadius: '6px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 600, textDecoration: 'none' }}
+                                                    >
+                                                        ⬇️ Download
+                                                    </a>
+                                                    <button
+                                                        onClick={async () => {
+                                                            await fetch(`/api/documents/${doc.id}/track-download`, { method: 'POST' })
+                                                            window.open(doc.url, '_blank')
+                                                        }}
+                                                        style={{ padding: '6px 12px', borderRadius: '6px', background: 'var(--gradient-primary)', border: 'none', cursor: 'pointer', color: 'white', fontSize: '12px', fontWeight: 600 }}
+                                                    >
+                                                        🖨️ Print
+                                                    </button>
+                                                </div>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'flex-end' }}>
+                                                    <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                                                        Uploaded: {new Date(doc.uploadedAt).toLocaleDateString()}
+                                                    </span>
+                                                    {doc.lastDownloadedAt && (
+                                                        <span style={{ fontSize: '10px', color: 'var(--accent-blue)' }}>
+                                                            Last Downloaded: {new Date(doc.lastDownloadedAt).toLocaleDateString()}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div style={{ padding: '6px 12px', borderRadius: '6px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', color: '#ef4444', fontSize: '11px', fontWeight: 600 }}>
+                                                🔒 Admin Access Required
+                                            </div>
+                                        )}
                                     </div>
                                 ))}
                             </div>

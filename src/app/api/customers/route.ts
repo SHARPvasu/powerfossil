@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getSession } from '@/lib/auth'
+import { uploadImage } from '@/lib/cloudinary'
 
 export async function GET(req: NextRequest) {
     const session = await getSession()
@@ -54,9 +55,44 @@ export async function POST(req: NextRequest) {
     // Agents create customers as PENDING_APPROVAL. Admins create them as ACTIVE.
     const status = isAgent ? 'PENDING_APPROVAL' : 'ACTIVE'
 
+    // Handle Image Uploads
+    let livePhotoUrl = null
+    let aadharFrontUrl = null
+    let aadharBackUrl = null
+    let panPhotoUrl = null
+
+    try {
+        if (data.livePhoto && data.livePhoto.startsWith('data:image')) {
+            livePhotoUrl = await uploadImage(data.livePhoto, 'customers')
+        }
+        if (data.aadharFront && (data.aadharFront.startsWith('data:image') || data.aadharFront.startsWith('data:application/pdf'))) {
+            aadharFrontUrl = await uploadImage(data.aadharFront, 'customers/kyc')
+        }
+        if (data.aadharBack && (data.aadharBack.startsWith('data:image') || data.aadharBack.startsWith('data:application/pdf'))) {
+            aadharBackUrl = await uploadImage(data.aadharBack, 'customers/kyc')
+        }
+        if (data.panPhoto && (data.panPhoto.startsWith('data:image') || data.panPhoto.startsWith('data:application/pdf'))) {
+            panPhotoUrl = await uploadImage(data.panPhoto, 'customers/kyc')
+        }
+    } catch (uploadError) {
+        console.error("Cloudinary upload failed during customer creation:", uploadError)
+        return NextResponse.json({ error: 'Failed to upload one or more documents' }, { status: 500 })
+    }
+
+    // Clean up the data object before passing it to Prisma to avoid unknown field errors
+    const customerData = { ...data }
+    delete customerData.livePhoto
+    delete customerData.aadharFront
+    delete customerData.aadharBack
+    delete customerData.panPhoto
+
     const customer = await prisma.customer.create({
         data: {
-            ...data,
+            ...customerData,
+            livePhoto: livePhotoUrl,
+            aadharFront: aadharFrontUrl,
+            aadharBack: aadharBackUrl,
+            panPhoto: panPhotoUrl,
             agentId: session.id,
             status,
         },

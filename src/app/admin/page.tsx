@@ -19,6 +19,8 @@ export default function AdminPage() {
     const [form, setForm] = useState({ name: '', email: '', password: '', role: 'AGENT', phone: '' })
     const [error, setError] = useState('')
     const [saving, setSaving] = useState(false)
+    const [otpModalOpen, setOtpModalOpen] = useState(false)
+    const [otpCode, setOtpCode] = useState('')
 
     useEffect(() => {
         fetch('/api/admin/users')
@@ -28,25 +30,79 @@ export default function AdminPage() {
     }, [])
 
     async function createUser() {
-        if (!form.name || !form.email || !form.password) {
-            setError('Name, email and password are required')
+        if (!form.name || !form.email || !form.password || !form.phone) {
+            setError('Name, email, password and phone are required')
             return
         }
         setSaving(true)
         setError('')
-        const res = await fetch('/api/admin/users', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(form),
-        })
-        const d = await res.json()
-        if (!res.ok) setError(d.error || 'Failed')
-        else {
-            setUsers(prev => [...prev, d.user])
-            setShowAdd(false)
-            setForm({ name: '', email: '', password: '', role: 'AGENT', phone: '' })
+
+        try {
+            // STEP 1: Dispatch OTP
+            const otpRes = await fetch('/api/otp/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ target: form.phone, type: 'phone' })
+            })
+            const otpData = await otpRes.json()
+            if (!otpRes.ok) {
+                setError(otpData.error || 'Failed to send OTP')
+                setSaving(false)
+                return
+            }
+
+            // Show the OTP Modal to proceed
+            setSaving(false)
+            setOtpModalOpen(true)
+        } catch {
+            setError('Network error during OTP dispatch')
+            setSaving(false)
         }
-        setSaving(false)
+    }
+
+    async function verifyAndSubmit() {
+        if (!otpCode || otpCode.length < 6) {
+            alert('Please enter a 6-digit OTP code.')
+            return
+        }
+        setSaving(true)
+        setError('')
+
+        try {
+            // STEP 2: Verify OTP
+            const verifyRes = await fetch('/api/otp/verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ target: form.phone, code: otpCode })
+            })
+            const verifyData = await verifyRes.json()
+            if (!verifyRes.ok) {
+                setError(verifyData.error || 'Invalid OTP code')
+                setSaving(false)
+                return
+            }
+
+            // STEP 3: Complete User Creation
+            const res = await fetch('/api/admin/users', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(form),
+            })
+            const d = await res.json()
+            if (!res.ok) {
+                setError(d.error || 'Failed')
+            } else {
+                setUsers(prev => [...prev, d.user])
+                setShowAdd(false)
+                setOtpModalOpen(false)
+                setForm({ name: '', email: '', password: '', role: 'AGENT', phone: '' })
+                setOtpCode('')
+            }
+        } catch {
+            setError('Network error during final submission')
+        } finally {
+            setSaving(false)
+        }
     }
 
     async function deleteUser(id: string) {
@@ -76,9 +132,25 @@ export default function AdminPage() {
                     <h1 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--text-primary)' }}>Admin Panel</h1>
                     <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginTop: '4px' }}>Manage users and system settings</p>
                 </div>
-                <button onClick={() => setShowAdd(true)} className="btn-glow" style={{ padding: '10px 20px', borderRadius: '10px', border: 'none', cursor: 'pointer', color: 'white', fontSize: '13px', fontWeight: 600 }}>
-                    + Add User
-                </button>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                    <button
+                        onClick={async () => {
+                            const res = await fetch('/api/cron/renewals')
+                            const d = await res.json()
+                            if (res.ok) {
+                                alert(`Sync Complete! Date checked: ${d.checkedDate}. Notifications created: ${d.notificationsCreated}`)
+                            } else {
+                                alert(`Sync Failed: ${d.error}`)
+                            }
+                        }}
+                        style={{ padding: '10px 18px', borderRadius: '10px', background: 'rgba(99, 102, 241, 0.1)', border: '1px solid rgba(99, 102, 241, 0.2)', color: 'var(--accent-blue)', fontSize: '13px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                    >
+                        <span>🔄</span> Sync 30D Renewals
+                    </button>
+                    <button onClick={() => setShowAdd(true)} className="btn-glow" style={{ padding: '10px 20px', borderRadius: '10px', border: 'none', cursor: 'pointer', color: 'white', fontSize: '13px', fontWeight: 600 }}>
+                        + Add User
+                    </button>
+                </div>
             </div>
 
             {/* Add User Modal */}
@@ -110,7 +182,41 @@ export default function AdminPage() {
                         {error && <p style={{ color: '#ef4444', fontSize: '12px', marginTop: '10px' }}>{error}</p>}
                         <div style={{ display: 'flex', gap: '10px', marginTop: '20px', justifyContent: 'flex-end' }}>
                             <button onClick={() => setShowAdd(false)} style={{ padding: '9px 18px', borderRadius: '8px', border: '1px solid var(--border)', cursor: 'pointer', color: 'var(--text-muted)', background: 'none', fontSize: '12px' }}>Cancel</button>
-                            <button onClick={createUser} disabled={saving} className="btn-glow" style={{ padding: '9px 20px', borderRadius: '8px', border: 'none', cursor: 'pointer', color: 'white', fontSize: '12px', fontWeight: 600 }}>{saving ? 'Creating...' : 'Create User'}</button>
+                            <button onClick={createUser} disabled={saving} className="btn-glow" style={{ padding: '9px 20px', borderRadius: '8px', border: 'none', cursor: 'pointer', color: 'white', fontSize: '12px', fontWeight: 600 }}>{saving ? 'Requesting OTP...' : 'Create User'}</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* OTP Verification Modal */}
+            {otpModalOpen && (
+                <div className="modal-backdrop">
+                    <div style={{ background: 'var(--bg-card)', borderRadius: '16px', padding: '32px', border: '1px solid var(--border)', maxWidth: '400px', width: '100%' }}>
+                        <h3 style={{ color: 'var(--text-primary)', marginBottom: '8px', fontWeight: 700, fontSize: '18px' }}>Security Verification</h3>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '24px' }}>
+                            An OTP has been sent to the new user&apos;s phone number <strong>{form.phone}</strong>. (Check terminal/console for mock code). Please enter it below to authorize this account creation.
+                        </p>
+                        <input
+                            type="text"
+                            maxLength={6}
+                            placeholder="Enter 6-digit code"
+                            value={otpCode}
+                            onChange={e => setOtpCode(e.target.value)}
+                            style={{
+                                width: '100%', padding: '12px 16px', borderRadius: '10px',
+                                background: 'rgba(255,255,255,0.04)', border: '1px solid var(--accent-blue)',
+                                color: 'var(--text-primary)', fontSize: '20px', letterSpacing: '8px', textAlign: 'center',
+                                outline: 'none', marginBottom: '16px'
+                            }}
+                        />
+                        {error && <p style={{ color: '#ef4444', fontSize: '12px', marginBottom: '16px', textAlign: 'center' }}>⚠ {error}</p>}
+                        <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+                            <button type="button" onClick={() => { setOtpModalOpen(false); setError(''); }} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '13px', background: 'none' }}>
+                                Cancel
+                            </button>
+                            <button type="button" onClick={verifyAndSubmit} disabled={saving} className="btn-glow" style={{ flex: 1, padding: '12px', borderRadius: '10px', border: 'none', cursor: 'pointer', color: 'white', fontSize: '13px', fontWeight: 600, opacity: saving ? 0.7 : 1 }}>
+                                {saving ? 'Verifying...' : 'Verify OTP ✓'}
+                            </button>
                         </div>
                     </div>
                 </div>

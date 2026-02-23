@@ -14,8 +14,8 @@ interface CallLog { id: string; type: string; duration: number; notes: string; o
 interface Policy { id: string; policyNumber: string; type: string; subType: string; company: string; planName: string; sumInsured: number; premium: number; startDate: string; endDate: string; status: string; tags: string }
 interface Customer {
     id: string; firstName: string; lastName: string; phone: string; email: string; dob: string; gender: string
-    address: string; city: string; state: string; pincode: string; occupation: string; income: string
-    aadharNo: string; panNo: string; kycStatus: string; livePhoto: string; preExisting: string; status: string; createdAt: string
+    address: string; city: string; state: string; pincode: string; occupation: string; income: string; height?: string; weight?: string
+    aadharNo: string; panNo: string; kycStatus: string; livePhoto: string; aadharFront?: string; aadharBack?: string; panPhoto?: string; preExisting: string; status: string; createdAt: string
     agent: { name: string; email: string }
     policies: Policy[]; family: FamilyMember[]; notes: Note[]; callLogs: CallLog[]
 }
@@ -45,6 +45,13 @@ export default function CustomerDetailPage() {
     // Family form
     const [showFamilyForm, setShowFamilyForm] = useState(false)
     const [familyForm, setFamilyForm] = useState({ name: '', relation: '', dob: '', gender: '', preExisting: '', insured: false })
+
+    // Policy form
+    const [showPolicyForm, setShowPolicyForm] = useState(false)
+    const [policyForm, setPolicyForm] = useState({
+        policyNumber: '', type: 'HEALTH', subType: 'INDIVIDUAL', company: '', planName: '',
+        sumInsured: '', premium: '', startDate: '', endDate: '', status: 'ACTIVE', externalDocUrl: '', familyMemberId: ''
+    })
 
     useEffect(() => {
         // Fetch session first
@@ -132,6 +139,31 @@ export default function CustomerDetailPage() {
         }
     }
 
+    async function addPolicy() {
+        const payload = {
+            ...policyForm,
+            customerId: id,
+            sumInsured: policyForm.sumInsured ? parseFloat(policyForm.sumInsured) : null,
+            premium: policyForm.premium ? parseFloat(policyForm.premium) : null,
+        }
+        const res = await fetch('/api/policies', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        })
+        const d = await res.json()
+        if (res.ok) {
+            setCustomer(prev => prev ? { ...prev, policies: [d.policy, ...prev.policies] } : prev)
+            setShowPolicyForm(false)
+            setPolicyForm({
+                policyNumber: '', type: 'HEALTH', subType: 'INDIVIDUAL', company: '', planName: '',
+                sumInsured: '', premium: '', startDate: '', endDate: '', status: 'ACTIVE', externalDocUrl: '', familyMemberId: ''
+            })
+        } else {
+            alert('Failed to save policy: ' + d.error)
+        }
+    }
+
     async function deleteNote(noteId: string) {
         await fetch(`/api/notes?id=${noteId}`, { method: 'DELETE' })
         setCustomer(prev => prev ? { ...prev, notes: prev.notes.filter(n => n.id !== noteId) } : prev)
@@ -163,9 +195,24 @@ export default function CustomerDetailPage() {
 
         doc.text(`KYC Status: ${customer.kycStatus}`, 120, 45)
         doc.text(`Agent: ${customer.agent?.name || 'N/A'}`, 120, 52)
+        doc.text(`Height: ${customer.height || 'N/A'}`, 120, 59)
+        doc.text(`Weight: ${customer.weight || 'N/A'}`, 120, 66)
+
+        // Health & Notes
+        const preExRaw = customer.preExisting || ''
+        let preExPrint = 'None Declared'
+        if (preExRaw) { // fast string check instead of parsing again for PDF brevity
+            if (preExRaw.includes('conditions') || preExRaw.length > 5) preExPrint = 'Yes (See profile line items)'
+        }
+        doc.text(`Health Issues: ${preExPrint}`, 14, 80)
+
+        // KYC Documents Checking
+        const hasAadhar = !!(customer.aadharFront || customer.aadharBack)
+        const hasPan = !!customer.panPhoto
+        doc.text(`Aadhar Uploaded: ${hasAadhar ? 'Yes' : 'No'} | PAN Uploaded: ${hasPan ? 'Yes' : 'No'}`, 120, 80)
 
         // Policies Table
-        let yPos = 90
+        let yPos = 95
         if (customer.policies.length > 0) {
             doc.setFontSize(14)
             doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2])
@@ -297,10 +344,10 @@ export default function CustomerDetailPage() {
                                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
                                         Edit
                                     </button>
-                                    <Link href={`/policies/new?customerId=${id}`} className="btn-glow" style={{ padding: '8px 18px', borderRadius: '8px', color: 'white', fontSize: '12px', fontWeight: 600, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <button onClick={() => setShowPolicyForm(true)} className="btn-glow" style={{ padding: '8px 18px', borderRadius: '8px', color: 'white', fontSize: '12px', fontWeight: 600, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
                                         Add Policy
-                                    </Link>
+                                    </button>
                                 </>
                             )}
                         </>
@@ -334,7 +381,7 @@ export default function CustomerDetailPage() {
                                     { label: 'First Name', key: 'firstName' }, { label: 'Last Name', key: 'lastName' },
                                     { label: 'Phone', key: 'phone' }, { label: 'Email', key: 'email' },
                                     { label: 'Date of Birth', key: 'dob', type: 'date' }, { label: 'Occupation', key: 'occupation' },
-                                    { label: 'Annual Income', key: 'income' },
+                                    { label: 'Annual Income', key: 'income' }, { label: 'Height (e.g. 5\'10")', key: 'height' }, { label: 'Weight (e.g. 75kg)', key: 'weight' },
                                 ].map(f => (
                                     <div key={f.key}>
                                         <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>{f.label}</label>
@@ -350,6 +397,8 @@ export default function CustomerDetailPage() {
                                     { label: 'Occupation', value: customer.occupation || '—' },
                                     { label: 'Annual Income', value: customer.income || '—' },
                                     { label: 'Agent', value: customer.agent?.name || '—' },
+                                    { label: 'Height', value: customer.height || '—' },
+                                    { label: 'Weight', value: customer.weight || '—' },
                                     { label: 'Added On', value: new Date(customer.createdAt).toLocaleDateString('en-IN') },
                                 ].map(row => (
                                     <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
@@ -411,8 +460,17 @@ export default function CustomerDetailPage() {
                         {customer.livePhoto && (
                             <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '14px', padding: '20px' }}>
                                 <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '12px' }}>Live Photo</h3>
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img src={customer.livePhoto} alt="Live" style={{ width: 100, height: 120, objectFit: 'cover', borderRadius: '10px', border: '2px solid var(--border)' }} />
+                                {userRole === 'ADMIN' ? (
+                                    /* eslint-disable-next-line @next/next/no-img-element */
+                                    <img src={customer.livePhoto} alt="Live" style={{ width: 100, height: 120, objectFit: 'cover', borderRadius: '10px', border: '2px solid var(--border)' }} />
+                                ) : (
+                                    <div style={{ width: 100, height: 120, borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)' }}>
+                                        <div style={{ textAlign: 'center' }}>
+                                            <div style={{ fontSize: '18px', marginBottom: '4px' }}>✔</div>
+                                            <span style={{ fontSize: '10px', color: 'var(--accent-green)', fontWeight: 600 }}>Uploaded</span>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
@@ -424,7 +482,7 @@ export default function CustomerDetailPage() {
                 <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
                         <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)' }}>Policies ({customer.policies.length})</h3>
-                        {userRole !== 'AUDITOR' && <Link href={`/policies/new?customerId=${id}`} className="btn-glow" style={{ padding: '8px 16px', borderRadius: '8px', color: 'white', fontSize: '12px', fontWeight: 600, textDecoration: 'none' }}>+ Add Policy</Link>}
+                        {userRole !== 'AUDITOR' && <button onClick={() => setShowPolicyForm(true)} className="btn-glow" style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', cursor: 'pointer', color: 'white', fontSize: '12px', fontWeight: 600 }}>+ Add Policy</button>}
                     </div>
                     {customer.policies.length === 0 ? (
                         <div style={{ padding: '40px', textAlign: 'center', background: 'var(--bg-card)', borderRadius: '14px', border: '1px solid var(--border)' }}>
@@ -464,6 +522,77 @@ export default function CustomerDetailPage() {
                                     </div>
                                 )
                             })}
+                        </div>
+                    )}
+
+                    {showPolicyForm && (
+                        <div className="modal-backdrop" onClick={() => setShowPolicyForm(false)}>
+                            <div style={{ background: 'var(--bg-card)', borderRadius: '16px', padding: '28px', border: '1px solid var(--border)', width: '500px', maxWidth: '90vw', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+                                <h3 style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: '20px', fontSize: '16px' }}>Add New Policy</h3>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                    <div style={{ gridColumn: '1 / -1' }}>
+                                        <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Policy Number *</label>
+                                        <input type="text" style={inputCls} placeholder="POL-123456789" value={policyForm.policyNumber} onChange={e => setPolicyForm(p => ({ ...p, policyNumber: e.target.value }))} required />
+                                    </div>
+                                    <div style={{ gridColumn: '1 / -1' }}>
+                                        <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Assign To (Customer or Family Member)</label>
+                                        <select style={inputCls} value={policyForm.familyMemberId} onChange={e => setPolicyForm(p => ({ ...p, familyMemberId: e.target.value }))}>
+                                            <option value="">{customer.firstName} {customer.lastName} (Primary)</option>
+                                            {customer.family.map(f => (
+                                                <option key={f.id} value={f.id}>{f.name} ({f.relation})</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Insurance Type *</label>
+                                        <select style={inputCls} value={policyForm.type} onChange={e => setPolicyForm(p => ({ ...p, type: e.target.value }))}>
+                                            <option value="HEALTH">Health</option>
+                                            <option value="MOTOR">Motor</option>
+                                            <option value="LIFE">Life</option>
+                                            <option value="TERM">Term</option>
+                                            <option value="TRAVEL">Travel</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Sub-Type</label>
+                                        <select style={inputCls} value={policyForm.subType} onChange={e => setPolicyForm(p => ({ ...p, subType: e.target.value }))}>
+                                            {policyForm.type === 'HEALTH' && <><option value="INDIVIDUAL">Individual</option><option value="FAMILY_FLOATER">Family Floater</option><option value="GROUP">Group</option></>}
+                                            {policyForm.type === 'MOTOR' && <><option value="COMPREHENSIVE">Comprehensive</option><option value="THIRD_PARTY">Third Party</option></>}
+                                            {policyForm.type === 'LIFE' && <><option value="ULIP">ULIP</option><option value="ENDOWMENT">Endowment</option></>}
+                                            {policyForm.type === 'TERM' && <><option value="PURE_TERM">Pure Term</option><option value="RETURN_OF_PREMIUM">Return of Premium</option></>}
+                                            {policyForm.type === 'TRAVEL' && <><option value="DOMESTIC">Domestic</option><option value="INTERNATIONAL">International</option></>}
+                                        </select>
+                                    </div>
+                                    <div style={{ gridColumn: '1 / -1' }}>
+                                        <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Company</label>
+                                        <input type="text" style={inputCls} placeholder="e.g. LIC, Star Health" value={policyForm.company} onChange={e => setPolicyForm(p => ({ ...p, company: e.target.value }))} required />
+                                    </div>
+                                    <div style={{ gridColumn: '1 / -1' }}>
+                                        <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Plan Name</label>
+                                        <input type="text" style={inputCls} placeholder="e.g. Jeevan Anand" value={policyForm.planName} onChange={e => setPolicyForm(p => ({ ...p, planName: e.target.value }))} required />
+                                    </div>
+                                    <div>
+                                        <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Sum Insured (₹)</label>
+                                        <input type="number" style={inputCls} placeholder="500000" value={policyForm.sumInsured} onChange={e => setPolicyForm(p => ({ ...p, sumInsured: e.target.value }))} required />
+                                    </div>
+                                    <div>
+                                        <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Premium (₹)</label>
+                                        <input type="number" style={inputCls} placeholder="12500" value={policyForm.premium} onChange={e => setPolicyForm(p => ({ ...p, premium: e.target.value }))} required />
+                                    </div>
+                                    <div>
+                                        <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Start Date</label>
+                                        <input type="date" style={inputCls} value={policyForm.startDate} onChange={e => setPolicyForm(p => ({ ...p, startDate: e.target.value }))} required />
+                                    </div>
+                                    <div>
+                                        <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>End Date (Expiry)</label>
+                                        <input type="date" style={inputCls} value={policyForm.endDate} onChange={e => setPolicyForm(p => ({ ...p, endDate: e.target.value }))} required />
+                                    </div>
+                                </div>
+                                <div style={{ display: 'flex', gap: '10px', marginTop: '24px', justifyContent: 'flex-end' }}>
+                                    <button onClick={() => setShowPolicyForm(false)} style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--border)', cursor: 'pointer', color: 'var(--text-muted)', background: 'none', fontSize: '12px' }}>Cancel</button>
+                                    <button onClick={addPolicy} className="btn-glow" style={{ padding: '8px 18px', borderRadius: '8px', border: 'none', cursor: 'pointer', color: 'white', fontSize: '12px', fontWeight: 600 }}>Save Policy</button>
+                                </div>
+                            </div>
                         </div>
                     )}
                 </div>
@@ -509,10 +638,13 @@ export default function CustomerDetailPage() {
                             <div style={{ background: 'var(--bg-card)', borderRadius: '16px', padding: '28px', border: '1px solid var(--border)', width: '400px', maxWidth: '90vw' }} onClick={e => e.stopPropagation()}>
                                 <h3 style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: '20px', fontSize: '16px' }}>Add Family Member</h3>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                    <div>
+                                        <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Member&apos;s Name *</label>
+                                        <input type="text" style={inputCls} placeholder="Riya Sharma" value={familyForm.name} onChange={e => setFamilyForm(p => ({ ...p, name: e.target.value }))} />
+                                    </div>
                                     {[
-                                        { label: 'Name', key: 'name', placeholder: 'Priya Kumar' },
-                                        { label: 'Relation', key: 'relation', placeholder: 'Spouse / Son / Daughter / Parent' },
-                                        { label: 'Date of Birth', key: 'dob', type: 'date' },
+                                        { label: 'Relation *', key: 'relation', placeholder: 'Spouse / Son / Daughter / Parent' },
+                                        { label: 'Date of Birth *', key: 'dob', type: 'date' },
                                         { label: 'Pre-existing Conditions', key: 'preExisting', placeholder: 'Diabetes, Hypertension...' },
                                     ].map(f => (
                                         <div key={f.key}>
@@ -523,6 +655,7 @@ export default function CustomerDetailPage() {
                                                 value={String((familyForm as Record<string, string | boolean>)[f.key] || '')}
                                                 onChange={e => setFamilyForm(p => ({ ...p, [f.key]: e.target.value }))}
                                                 placeholder={(f as { placeholder?: string }).placeholder}
+                                                required={f.key === 'relation' || f.key === 'dob'}
                                             />
                                         </div>
                                     ))}
@@ -697,17 +830,34 @@ export default function CustomerDetailPage() {
                         )}
                     </div>
                     <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '14px', padding: '24px' }}>
-                        <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '16px' }}>Document Upload</h3>
-                        <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>Upload Aadhar, PAN and other documents</p>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            {['Aadhar Front', 'Aadhar Back', 'PAN Card', 'Photo'].map(doc => (
-                                <div key={doc} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)' }}>
-                                    <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>📄 {doc}</span>
-                                    {userRole !== 'AUDITOR' && (
-                                        <label style={{ padding: '5px 12px', borderRadius: '6px', border: '1px solid rgba(99,102,241,0.3)', cursor: 'pointer', color: 'var(--accent-blue)', fontSize: '11px', fontWeight: 600 }}>
-                                            Upload
-                                            <input type="file" accept="image/*" style={{ display: 'none' }} />
-                                        </label>
+                        <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '16px' }}>Uploaded Documents</h3>
+                        <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>Customer&apos;s submitted KYC documents</p>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+                            {[
+                                { title: 'Aadhar Card (Front)', url: customer.aadharFront },
+                                { title: 'Aadhar Card (Back)', url: customer.aadharBack },
+                                { title: 'PAN Card Document', url: customer.panPhoto }
+                            ].map(doc => (
+                                <div key={doc.title} style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', borderRadius: '12px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)' }}>
+                                    <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>{doc.title}</span>
+                                    {doc.url ? (
+                                        userRole === 'ADMIN' ? (
+                                            <div style={{ width: '100%', height: '140px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                <img src={doc.url} alt={doc.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                            </div>
+                                        ) : (
+                                            <div style={{ width: '100%', height: '140px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)' }}>
+                                                <div style={{ textAlign: 'center' }}>
+                                                    <div style={{ fontSize: '24px', marginBottom: '8px' }}>✔</div>
+                                                    <span style={{ fontSize: '12px', color: 'var(--accent-green)', fontWeight: 600 }}>Uploaded Safely</span>
+                                                </div>
+                                            </div>
+                                        )
+                                    ) : (
+                                        <div style={{ width: '100%', height: '140px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.02)', border: '1px dashed var(--border)' }}>
+                                            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Not uploaded</span>
+                                        </div>
                                     )}
                                 </div>
                             ))}

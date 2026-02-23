@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getSession } from '@/lib/auth'
+import { uploadImage } from '@/lib/cloudinary'
 
 export async function GET(req: NextRequest) {
     const session = await getSession()
@@ -48,11 +49,37 @@ export async function POST(req: NextRequest) {
     if (session.role === 'AUDITOR') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const data = await req.json()
+    const { externalPolicyDoc, ...policyData } = data
+
+    // Handle Cloudinary upload for the Policy Document
+    let documentUrl = null
+    if (externalPolicyDoc && externalPolicyDoc.startsWith('data:image')) {
+        try {
+            documentUrl = await uploadImage(externalPolicyDoc, 'policies')
+        } catch (uploadError) {
+            console.error("Cloudinary policy document upload failed:", uploadError)
+            return NextResponse.json({ error: 'Failed to upload document' }, { status: 500 })
+        }
+    }
+
     const policy = await prisma.policy.create({
         data: {
-            ...data,
+            ...policyData,
             agentId: session.id,
+            // Automatically create the linked document record if a file was provided
+            documents: documentUrl ? {
+                create: {
+                    name: `Policy_Doc_${policyData.policyNumber || 'External'}`,
+                    url: documentUrl,
+                    type: 'POLICY',
+                    customerId: policyData.customerId
+                }
+            } : undefined
         },
+        include: {
+            documents: true
+        }
     })
+
     return NextResponse.json({ policy }, { status: 201 })
 }
