@@ -11,7 +11,7 @@ const PRE_EXISTING = ['Diabetes', 'Hypertension', 'Heart Disease', 'Asthma', 'Th
 
 export default function NewCustomerPage() {
     const router = useRouter()
-    const [tab, setTab] = useState<'basic' | 'kyc' | 'health'>('basic')
+    const [tab, setTab] = useState<'basic' | 'family' | 'kyc' | 'policy' | 'health'>('basic')
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
     const [selectedConditions, setSelectedConditions] = useState<string[]>([])
@@ -37,6 +37,35 @@ export default function NewCustomerPage() {
         occupation: '', income: '', height: '', weight: '',
         aadharNo: '', panNo: '', kycStatus: 'PENDING',
     })
+
+    // Family Members State
+    const [familyMembers, setFamilyMembers] = useState<any[]>([])
+
+    // Initial Policy State
+    const [addInitialPolicy, setAddInitialPolicy] = useState(false)
+    const [initialPolicy, setInitialPolicy] = useState({
+        policyNumber: `POL-${Date.now()}`,
+        type: 'HEALTH',
+        subType: 'Individual',
+        company: '',
+        planName: '',
+        sumInsured: '',
+        premium: '',
+        paymentMode: 'ANNUAL',
+        startDate: new Date().toISOString().split('T')[0],
+        endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        issueDate: new Date().toISOString().split('T')[0],
+        vehicleNo: '',
+        vehicleModel: '',
+        vehicleYear: '',
+        nominee: '',
+        nomineeRelation: '',
+        tags: '',
+        externalPolicyDoc: '',
+    })
+
+    // Custom Plan for Policy
+    const [customPlan, setCustomPlan] = useState('')
     const [userRole, setUserRole] = useState<string | null>(null)
 
     useEffect(() => {
@@ -102,6 +131,31 @@ export default function NewCustomerPage() {
             setter(reader.result as string)
         }
         reader.readAsDataURL(file)
+    }
+
+    // Family Member Handlers
+    function addFamilyMember() {
+        setFamilyMembers([...familyMembers, { name: '', relation: 'Spouse', dob: '', gender: 'Female', insured: true }])
+    }
+
+    function removeFamilyMember(idx: number) {
+        setFamilyMembers(familyMembers.filter((_, i) => i !== idx))
+    }
+
+    function updateFamilyMember(idx: number, k: string, v: any) {
+        const next = [...familyMembers]
+        next[idx] = { ...next[idx], [k]: v }
+        setFamilyMembers(next)
+    }
+
+    // Policy Handler
+    function updatePolicy(k: string, v: string) {
+        setInitialPolicy(p => {
+            const next = { ...p, [k]: v }
+            if (k === 'type') { next.company = ''; next.planName = ''; next.subType = '' }
+            if (k === 'company') { next.planName = '' }
+            return next
+        })
     }
 
     async function handleSubmit(e: React.FormEvent) {
@@ -172,6 +226,14 @@ export default function NewCustomerPage() {
                     preExisting: (selectedConditions.length > 0 || customNotes.trim())
                         ? JSON.stringify({ conditions: selectedConditions, notes: customNotes.trim() })
                         : null,
+                    familyMembers,
+                    initialPolicy: addInitialPolicy ? {
+                        ...initialPolicy,
+                        planName: initialPolicy.planName === '__custom__' ? customPlan : initialPolicy.planName,
+                        sumInsured: initialPolicy.sumInsured ? parseFloat(initialPolicy.sumInsured) : null,
+                        premium: initialPolicy.premium ? parseFloat(initialPolicy.premium) : 0,
+                        tags: initialPolicy.tags ? JSON.stringify(initialPolicy.tags.split(',').map(t => t.trim()).filter(Boolean)) : null,
+                    } : null
                 }),
             })
             const data = await res.json()
@@ -222,14 +284,16 @@ export default function NewCustomerPage() {
                         border: '1px solid var(--border)', width: 'fit-content',
                     }}>
                         <button type="button" style={tabStyle('basic')} onClick={() => setTab('basic')}>Basic Info</button>
+                        <button type="button" style={tabStyle('family')} onClick={() => setTab('family')}>Family Details</button>
                         <button type="button" style={tabStyle('kyc')} onClick={() => setTab('kyc')}>KYC & Documents</button>
+                        <button type="button" style={tabStyle('policy')} onClick={() => setTab('policy')}>Initial Policy</button>
                         <button type="button" style={tabStyle('health')} onClick={() => setTab('health')}>Health & Notes</button>
                     </div>
 
                     <form onSubmit={handleSubmit}>
                         {/* Basic Info Tab */}
                         {tab === 'basic' && (
-                            <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '16px', padding: '28px' }}>
+                            <div className="animate-fade-in" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '16px', padding: '28px' }}>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                                     <div>
                                         <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>First Name *</label>
@@ -291,9 +355,72 @@ export default function NewCustomerPage() {
                             </div>
                         )}
 
+                        {/* Family Details Tab */}
+                        {tab === 'family' && (
+                            <div className="animate-fade-in" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '16px', padding: '28px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                                    <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)' }}>Family Members</h3>
+                                    <button type="button" onClick={addFamilyMember} style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', background: 'var(--gradient-primary)', color: 'white', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>
+                                        + Add Member
+                                    </button>
+                                </div>
+
+                                {familyMembers.length === 0 ? (
+                                    <div style={{ padding: '40px', textAlign: 'center', border: '1px dashed var(--border)', borderRadius: '12px' }}>
+                                        <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>No family members added yet. Click &quot;Add Member&quot; to include them.</p>
+                                    </div>
+                                ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                        {familyMembers.map((m, i) => (
+                                            <div key={i} style={{ padding: '20px', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid var(--border)', position: 'relative' }}>
+                                                <button type="button" onClick={() => removeFamilyMember(i)} style={{ position: 'absolute', top: '12px', right: '12px', background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}>
+                                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
+                                                </button>
+                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                                                    <div>
+                                                        <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px', fontWeight: 600 }}>NAME</label>
+                                                        <input className="input-dark" value={m.name} onChange={e => updateFamilyMember(i, 'name', e.target.value)} placeholder="Member Name" />
+                                                    </div>
+                                                    <div>
+                                                        <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px', fontWeight: 600 }}>RELATION</label>
+                                                        <select className="input-dark" value={m.relation} onChange={e => updateFamilyMember(i, 'relation', e.target.value)}>
+                                                            <option>Spouse</option>
+                                                            <option>Son</option>
+                                                            <option>Daughter</option>
+                                                            <option>Father</option>
+                                                            <option>Mother</option>
+                                                            <option>Brother</option>
+                                                            <option>Sister</option>
+                                                            <option>Other</option>
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px', fontWeight: 600 }}>DATE OF BIRTH</label>
+                                                        <input className="input-dark" type="date" value={m.dob} onChange={e => updateFamilyMember(i, 'dob', e.target.value)} />
+                                                    </div>
+                                                    <div>
+                                                        <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px', fontWeight: 600 }}>GENDER</label>
+                                                        <select className="input-dark" value={m.gender} onChange={e => updateFamilyMember(i, 'gender', e.target.value)}>
+                                                            <option>Male</option>
+                                                            <option>Female</option>
+                                                            <option>Other</option>
+                                                        </select>
+                                                    </div>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingTop: '15px' }}>
+                                                        <input type="checkbox" checked={m.insured} onChange={e => updateFamilyMember(i, 'insured', e.target.checked)} id={`insured-${i}`} />
+                                                        <label htmlFor={`insured-${i}`} style={{ fontSize: '13px', color: 'var(--text-primary)', cursor: 'pointer' }}>Included in Insurance</label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         {/* KYC Tab */}
                         {tab === 'kyc' && (
-                            <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '16px', padding: '28px' }}>
+                            <div className="animate-fade-in" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '16px', padding: '28px' }}>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '28px' }}>
                                     <div>
                                         <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Aadhar Number</label>
@@ -433,9 +560,87 @@ export default function NewCustomerPage() {
                             </div>
                         )}
 
+                        {/* Initial Policy Tab */}
+                        {tab === 'policy' && (
+                            <div className="animate-fade-in" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '16px', padding: '28px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '24px' }}>
+                                    <input type="checkbox" checked={addInitialPolicy} onChange={e => setAddInitialPolicy(e.target.checked)} id="addInitialPolicy" style={{ width: '18px', height: '18px' }} />
+                                    <label htmlFor="addInitialPolicy" style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', cursor: 'pointer' }}>Add Initial Policy / Proposal Now</label>
+                                </div>
+
+                                {addInitialPolicy && (
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                        <div style={{ gridColumn: 'span 2', display: 'flex', gap: '10px', marginBottom: '12px' }}>
+                                            {['HEALTH', 'MOTOR', 'LIFE', 'TERM'].map(t => (
+                                                <button key={t} type="button" onClick={() => updatePolicy('type', t)} style={{
+                                                    flex: 1, padding: '10px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: 600,
+                                                    background: initialPolicy.type === t ? 'var(--gradient-primary)' : 'rgba(255,255,255,0.04)',
+                                                    color: initialPolicy.type === t ? 'white' : 'var(--text-muted)',
+                                                    border: 'none', transition: 'all 0.2s'
+                                                }}>
+                                                    {t}
+                                                </button>
+                                            ))}
+                                        </div>
+
+                                        <div>
+                                            <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px', fontWeight: 600 }}>POLICY NUMBER</label>
+                                            <input className="input-dark" value={initialPolicy.policyNumber} onChange={e => updatePolicy('policyNumber', e.target.value)} />
+                                        </div>
+                                        <div>
+                                            <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px', fontWeight: 600 }}>COMPANY</label>
+                                            <input className="input-dark" value={initialPolicy.company} onChange={e => updatePolicy('company', e.target.value)} placeholder="e.g. Star Health" />
+                                        </div>
+                                        <div>
+                                            <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px', fontWeight: 600 }}>PLAN NAME</label>
+                                            <input className="input-dark" value={initialPolicy.planName} onChange={e => updatePolicy('planName', e.target.value)} placeholder="e.g. Optima Secure" />
+                                        </div>
+                                        <div>
+                                            <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px', fontWeight: 600 }}>PREMIUM (₹)</label>
+                                            <input className="input-dark" type="number" value={initialPolicy.premium} onChange={e => updatePolicy('premium', e.target.value)} placeholder="15000" />
+                                        </div>
+                                        <div>
+                                            <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px', fontWeight: 600 }}>START DATE</label>
+                                            <input className="input-dark" type="date" value={initialPolicy.startDate} onChange={e => updatePolicy('startDate', e.target.value)} />
+                                        </div>
+                                        <div>
+                                            <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px', fontWeight: 600 }}>END DATE</label>
+                                            <input className="input-dark" type="date" value={initialPolicy.endDate} onChange={e => updatePolicy('endDate', e.target.value)} />
+                                        </div>
+
+                                        {initialPolicy.type === 'MOTOR' && (
+                                            <>
+                                                <div>
+                                                    <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px', fontWeight: 600 }}>VEHICLE NUMBER</label>
+                                                    <input className="input-dark" value={initialPolicy.vehicleNo} onChange={e => updatePolicy('vehicleNo', e.target.value.toUpperCase())} placeholder="MH12AB1234" />
+                                                </div>
+                                                <div>
+                                                    <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px', fontWeight: 600 }}>VEHICLE MODEL</label>
+                                                    <input className="input-dark" value={initialPolicy.vehicleModel} onChange={e => updatePolicy('vehicleModel', e.target.value)} placeholder="Honda City" />
+                                                </div>
+                                            </>
+                                        )}
+
+                                        {(initialPolicy.type === 'LIFE' || initialPolicy.type === 'TERM') && (
+                                            <>
+                                                <div>
+                                                    <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px', fontWeight: 600 }}>NOMINEE</label>
+                                                    <input className="input-dark" value={initialPolicy.nominee} onChange={e => updatePolicy('nominee', e.target.value)} placeholder="Nominee Name" />
+                                                </div>
+                                                <div>
+                                                    <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px', fontWeight: 600 }}>NOMINEE RELATION</label>
+                                                    <input className="input-dark" value={initialPolicy.nomineeRelation} onChange={e => updatePolicy('nomineeRelation', e.target.value)} placeholder="Spouse / Son" />
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         {/* Health Tab */}
                         {tab === 'health' && (
-                            <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '16px', padding: '28px' }}>
+                            <div className="animate-fade-in" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '16px', padding: '28px' }}>
                                 <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '16px' }}>Pre-Existing Medical Conditions</h3>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
                                     {PRE_EXISTING.map(cond => (
@@ -490,7 +695,12 @@ export default function NewCustomerPage() {
                             </button>
                             <div style={{ display: 'flex', gap: '10px' }}>
                                 {tab !== 'health' && (
-                                    <button type="button" onClick={() => setTab(tab === 'basic' ? 'kyc' : 'health')} style={{ padding: '10px 20px', borderRadius: '10px', border: '1px solid rgba(99,102,241,0.3)', cursor: 'pointer', color: 'var(--accent-blue)', background: 'rgba(99,102,241,0.1)', fontSize: '13px', fontWeight: 600 }}>
+                                    <button type="button" onClick={() => {
+                                        if (tab === 'basic') setTab('family')
+                                        else if (tab === 'family') setTab('kyc')
+                                        else if (tab === 'kyc') setTab('policy')
+                                        else if (tab === 'policy') setTab('health')
+                                    }} style={{ padding: '10px 20px', borderRadius: '10px', border: '1px solid rgba(99,102,241,0.3)', cursor: 'pointer', color: 'var(--accent-blue)', background: 'rgba(99,102,241,0.1)', fontSize: '13px', fontWeight: 600 }}>
                                         Next →
                                     </button>
                                 )}

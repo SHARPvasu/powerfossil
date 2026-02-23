@@ -60,6 +60,7 @@ export async function POST(req: NextRequest) {
     let aadharFrontUrl = null
     let aadharBackUrl = null
     let panPhotoUrl = null
+    let policyDocUrl: string | null = null
 
     try {
         if (data.livePhoto && data.livePhoto.startsWith('data:image')) {
@@ -74,6 +75,11 @@ export async function POST(req: NextRequest) {
         if (data.panPhoto && (data.panPhoto.startsWith('data:image') || data.panPhoto.startsWith('data:application/pdf'))) {
             panPhotoUrl = await uploadImage(data.panPhoto, 'customers/kyc')
         }
+
+        // Handle Policy Doc Upload (Phase 5)
+        if (data.initialPolicy?.externalPolicyDoc && (data.initialPolicy.externalPolicyDoc.startsWith('data:image') || data.initialPolicy.externalPolicyDoc.startsWith('data:application/pdf'))) {
+            policyDocUrl = await uploadImage(data.initialPolicy.externalPolicyDoc, 'policies')
+        }
     } catch (uploadError) {
         console.error("Cloudinary upload failed during customer creation:", uploadError)
         return NextResponse.json({ error: 'Failed to upload one or more documents' }, { status: 500 })
@@ -81,10 +87,15 @@ export async function POST(req: NextRequest) {
 
     // Clean up the data object before passing it to Prisma to avoid unknown field errors
     const customerData = { ...data }
+    const familyMembersData = customerData.familyMembers || []
+    const initialPolicyData = customerData.initialPolicy
+
     delete customerData.livePhoto
     delete customerData.aadharFront
     delete customerData.aadharBack
     delete customerData.panPhoto
+    delete customerData.familyMembers
+    delete customerData.initialPolicy
 
     const customer = await prisma.customer.create({
         data: {
@@ -95,6 +106,46 @@ export async function POST(req: NextRequest) {
             panPhoto: panPhotoUrl,
             agentId: session.id,
             status,
+            family: {
+                create: familyMembersData.map((m: any) => ({
+                    name: m.name,
+                    relation: m.relation,
+                    dob: m.dob,
+                    gender: m.gender,
+                    insured: m.insured
+                }))
+            },
+            policies: initialPolicyData ? {
+                create: {
+                    policyNumber: initialPolicyData.policyNumber,
+                    type: initialPolicyData.type,
+                    subType: initialPolicyData.subType,
+                    company: initialPolicyData.company,
+                    planName: initialPolicyData.planName,
+                    sumInsured: initialPolicyData.sumInsured,
+                    premium: initialPolicyData.premium,
+                    paymentMode: initialPolicyData.paymentMode,
+                    startDate: initialPolicyData.startDate,
+                    endDate: initialPolicyData.endDate,
+                    issueDate: initialPolicyData.issueDate,
+                    vehicleNo: initialPolicyData.vehicleNo,
+                    vehicleModel: initialPolicyData.vehicleModel,
+                    vehicleYear: initialPolicyData.vehicleYear,
+                    nominee: initialPolicyData.nominee,
+                    nomineeRelation: initialPolicyData.nomineeRelation,
+                    tags: initialPolicyData.tags,
+                    agentId: session.id,
+                    status: 'ACTIVE',
+                    documents: policyDocUrl ? {
+                        create: {
+                            name: `Policy Doc - ${initialPolicyData.policyNumber}`,
+                            type: initialPolicyData.externalPolicyDoc.startsWith('data:application/pdf') ? 'PDF' : 'IMAGE',
+                            url: policyDocUrl,
+                            size: 0, // In a real app, calculate actual size
+                        }
+                    } : undefined
+                }
+            } : undefined
         },
     })
 
