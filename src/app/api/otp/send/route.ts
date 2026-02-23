@@ -43,7 +43,11 @@ export async function POST(req: NextRequest) {
         // if (type === 'email') await resend.emails.send({ ... })
         // if (type === 'phone') await twilio.messages.create({ ... })
 
-        return NextResponse.json({ success: true, message: `OTP sent to ${target} (Check terminal/console during development)` })
+        return NextResponse.json({
+            success: true,
+            message: `OTP sent to ${target} (Check terminal/console during development)`,
+            ...(process.env.NODE_ENV === 'development' ? { code } : {})
+        })
 
     } catch (error) {
         console.error('OTP Send Error:', error)

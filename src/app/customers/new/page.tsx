@@ -25,6 +25,8 @@ export default function NewCustomerPage() {
     // OTP Verification States
     const [otpModalOpen, setOtpModalOpen] = useState(false)
     const [otpCode, setOtpCode] = useState('')
+    const [devOtpCode, setDevOtpCode] = useState<string | null>(null)
+    const [resendLoading, setResendLoading] = useState(false)
 
     // Document Upload States
     const [aadharFront, setAadharFront] = useState<string | null>(null)
@@ -184,10 +186,36 @@ export default function NewCustomerPage() {
             // Show the OTP Modal to proceed to step 2 verification
             setLoading(false)
             setOtpModalOpen(true)
+            if (otpData.code) {
+                // In dev mode, we can show a hint or even pre-fill it
+                setDevOtpCode(otpData.code)
+            }
 
         } catch {
             setError('Network error during OTP dispatch')
             setLoading(false)
+        }
+    }
+
+    async function handleResendOtp() {
+        setResendLoading(true)
+        setDevOtpCode(null)
+        try {
+            const otpRes = await fetch('/api/otp/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ target: form.phone, type: 'phone' })
+            })
+            const otpData = await otpRes.json()
+            if (!otpRes.ok) {
+                alert(otpData.error || 'Failed to resend OTP')
+            } else if (otpData.code) {
+                setDevOtpCode(otpData.code)
+            }
+        } catch {
+            alert('Network error during OTP resend')
+        } finally {
+            setResendLoading(false)
         }
     }
 
@@ -719,6 +747,12 @@ export default function NewCustomerPage() {
                                 <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '24px' }}>
                                     An OTP has been sent to the customer&apos;s phone number <strong>{form.phone}</strong>. (Check terminal/console for mock code). Please enter it below to authorize this profile creation.
                                 </p>
+                                {devOtpCode && (
+                                    <div style={{ padding: '12px', background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.3)', borderRadius: '10px', marginBottom: '20px', textAlign: 'center' }}>
+                                        <p style={{ color: '#34d399', fontSize: '12px', fontWeight: 600 }}>🛠 DEVELOPMENT HINT</p>
+                                        <p style={{ color: 'white', fontSize: '18px', fontWeight: 800, letterSpacing: '2px', marginTop: '4px' }}>{devOtpCode}</p>
+                                    </div>
+                                )}
                                 <input
                                     type="text"
                                     maxLength={6}
@@ -729,9 +763,19 @@ export default function NewCustomerPage() {
                                         width: '100%', padding: '12px 16px', borderRadius: '10px',
                                         background: 'rgba(255,255,255,0.04)', border: '1px solid var(--accent-blue)',
                                         color: 'var(--text-primary)', fontSize: '20px', letterSpacing: '8px', textAlign: 'center',
-                                        outline: 'none', marginBottom: '16px'
+                                        outline: 'none', marginBottom: '8px'
                                     }}
                                 />
+                                <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+                                    <button
+                                        type="button"
+                                        onClick={handleResendOtp}
+                                        disabled={resendLoading}
+                                        style={{ background: 'none', border: 'none', color: 'var(--accent-blue)', fontSize: '12px', cursor: 'pointer', opacity: resendLoading ? 0.5 : 1 }}
+                                    >
+                                        {resendLoading ? 'Sending...' : 'Request another OTP'}
+                                    </button>
+                                </div>
                                 {error && <p style={{ color: '#ef4444', fontSize: '12px', marginBottom: '16px', textAlign: 'center' }}>⚠ {error}</p>}
                                 <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
                                     <button type="button" onClick={() => { setOtpModalOpen(false); setError(''); }} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '13px', background: 'none' }}>
