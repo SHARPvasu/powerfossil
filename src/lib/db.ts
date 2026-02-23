@@ -8,7 +8,7 @@ const globalForPrisma = globalThis as unknown as {
 const createPrismaClient = () => {
   return new PrismaClient({
     log: ['error'], // Keep only error logs to reduce noise
-  }).$extends(withAccelerate())
+  })
 }
 
 export const prisma = globalForPrisma.prisma ?? createPrismaClient()

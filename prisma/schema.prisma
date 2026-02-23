@@ -68,6 +68,9 @@ model Customer {
   notes        Note[]
   callLogs     CallLog[]
   proposerFor  Policy[]   @relation("ProposerRelation")
+
+  @@index([agentId])
+  @@index([status])
 }
 
 model FamilyMember {
@@ -122,6 +125,11 @@ model Policy {
   proposer       Customer? @relation("ProposerRelation", fields: [proposerId], references: [id])
   agent          User     @relation(fields: [agentId], references: [id])
   documents      Document[]
+
+  @@index([agentId])
+  @@index([status])
+  @@index([type])
+  @@index([endDate])
 }
 
 model Document {
@@ -182,4 +190,6 @@ model OTPVerification {
   expiresAt DateTime // the timestamp this OTP becomes invalid
   verified  Boolean  @default(false) // becomes true once the user enters it correctly
   createdAt DateTime @default(now())
+
+  @@index([target])
 }
