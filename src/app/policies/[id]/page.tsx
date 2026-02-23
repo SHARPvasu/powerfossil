@@ -38,7 +38,7 @@ interface Policy {
     }
     proposer: { firstName: string; lastName: string } | null
     agent: { name: string }
-    documents: { id: string; name: string; type: string; url: string; size: number }[]
+    documents: { id: string; name: string; type: string; url: string; size: number; uploadedAt: string; lastDownloadedAt: string | null }[]
 }
 
 const STATUS_OPTIONS = ['ACTIVE', 'EXPIRED', 'CANCELLED', 'RENEWED']

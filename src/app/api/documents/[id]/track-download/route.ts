@@ -4,15 +4,15 @@ import { getSession } from '@/lib/auth'
 
 export async function POST(
     req: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await params
     const session = await getSession()
     if (!session || session.role !== 'ADMIN') {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     try {
-        const { id } = params
 
         await prisma.document.update({
             where: { id },
