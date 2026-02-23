@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
 
-interface UserSession { id: string; name: string; email: string; role: string; }
+
 
 // ─── All current Indian insurance companies by category ──────────────────────
 const COMPANIES_BY_TYPE: Record<string, string[]> = {

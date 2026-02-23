@@ -40,7 +40,7 @@ export default function RenewalsPage() {
 
     const overdue = policies.filter(p => daysLeft(p.endDate) <= 0)
     const critical = policies.filter(p => daysLeft(p.endDate) > 0 && daysLeft(p.endDate) <= 7)
-    const warning = policies.filter(p => daysLeft(p.endDate) > 7)
+
 
     return (
         <div className="animate-fade-in" style={{ padding: '32px' }}>

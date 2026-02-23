@@ -87,12 +87,12 @@ const adminItems = [
 interface SidebarProps {
     userRole: string
     userName: string
-    userEmail: string
+
     collapsed?: boolean
     onToggle?: () => void
 }
 
-export default function Sidebar({ userRole, userName, userEmail, collapsed, onToggle }: SidebarProps) {
+export default function Sidebar({ userRole, userName, collapsed, onToggle }: SidebarProps) {
     const pathname = usePathname()
     const router = useRouter()
     const [loggingOut, setLoggingOut] = useState(false)

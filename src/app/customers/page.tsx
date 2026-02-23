@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
-interface UserSession { id: string; name: string; email: string; role: string; }
+
 
 interface Policy {
     id: string

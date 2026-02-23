@@ -57,7 +57,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <Sidebar
                 userRole={user?.role || ''}
                 userName={user?.name || ''}
-                userEmail={user?.email || ''}
+
                 collapsed={sidebarCollapsed}
                 onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
             />

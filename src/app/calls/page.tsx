@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 
-interface UserSession { id: string; name: string; email: string; role: string; }
+
 
 interface Call {
     id: string

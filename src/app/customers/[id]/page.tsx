@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 
-interface UserSession { id: string; name: string; email: string; role: string; }
+
 
 interface FamilyMember { id: string; name: string; relation: string; dob: string; gender: string; preExisting: string; insured: boolean }
 interface Note { id: string; content: string; type: string; createdAt: string; agent: { name: string } }
@@ -180,7 +180,7 @@ export default function CustomerDetailPage() {
                 theme: 'striped',
                 headStyles: { fillColor: primaryColor }
             })
-            yPos = (doc as any).lastAutoTable.finalY + 15
+            yPos = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 15
         }
 
         // Family Members Table
@@ -201,7 +201,7 @@ export default function CustomerDetailPage() {
         }
 
         // Footer
-        const pageCount = (doc as any).internal.getNumberOfPages()
+        const pageCount = (doc as unknown as { internal: { getNumberOfPages: () => number } }).internal.getNumberOfPages()
         for (let i = 1; i <= pageCount; i++) {
             doc.setPage(i)
             doc.setFontSize(10)
@@ -235,7 +235,7 @@ export default function CustomerDetailPage() {
                 preExistingConditions = parsed.conditions || []
                 preExistingNotes = parsed.notes || ''
             }
-        } catch (e) { }
+        } catch { }
     }
     const activePolicies = customer.policies.filter(p => p.status === 'ACTIVE')
 
@@ -338,7 +338,7 @@ export default function CustomerDetailPage() {
                                 ].map(f => (
                                     <div key={f.key}>
                                         <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>{f.label}</label>
-                                        <input type={f.type || 'text'} style={inputCls} value={(editForm as any)[f.key] || ''} onChange={e => setEditForm(p => ({ ...p, [f.key]: e.target.value }))} />
+                                        <input type={f.type || 'text'} style={inputCls} value={(editForm as Record<string, string>)[f.key] || ''} onChange={e => setEditForm(p => ({ ...p, [f.key]: e.target.value }))} />
                                     </div>
                                 ))}
                             </div>
@@ -411,6 +411,7 @@ export default function CustomerDetailPage() {
                         {customer.livePhoto && (
                             <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '14px', padding: '20px' }}>
                                 <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '12px' }}>Live Photo</h3>
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
                                 <img src={customer.livePhoto} alt="Live" style={{ width: 100, height: 120, objectFit: 'cover', borderRadius: '10px', border: '2px solid var(--border)' }} />
                             </div>
                         )}
@@ -519,7 +520,7 @@ export default function CustomerDetailPage() {
                                             <input
                                                 type={f.type || 'text'}
                                                 style={inputCls}
-                                                value={String((familyForm as any)[f.key] || '')}
+                                                value={String((familyForm as Record<string, string | boolean>)[f.key] || '')}
                                                 onChange={e => setFamilyForm(p => ({ ...p, [f.key]: e.target.value }))}
                                                 placeholder={(f as { placeholder?: string }).placeholder}
                                             />

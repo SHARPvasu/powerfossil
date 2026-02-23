@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 
-interface UserSession { id: string; name: string; email: string; role: string; }
+
 
 interface DashboardStats {
     totalCustomers: number
