@@ -43,7 +43,16 @@ export const getDatabaseErrorDetails = (error: unknown) => {
     return { message: 'Database connection string is invalid. Check DATABASE_URL and DIRECT_URL.', status: 500 }
   }
 
-  return null
+  if (message.includes('P2021')) {
+    return { message: 'Database tables are missing. Please ensure your database is migrated (run setup).', status: 500 }
+  }
+
+  if (message.includes('P')) {
+    const pCode = message.match(/P\d{4}/)?.[0] || 'Unknown';
+    return { message: `Database error (${pCode}): ` + message.split('\n')[0].substring(0, 100).replace(/"/g, "'"), status: 500 }
+  }
+
+  return { message: message ? `Database issue: ${message}` : 'Unknown server error', status: 500 }
 }
 
 export const checkDatabaseConnection = async () => {
