@@ -19,6 +19,12 @@ model User {
   role      String   @default("AGENT") // ADMIN, AGENT, AUDITOR
   avatar    String?
   phone     String?
+  // KYC
+  aadharNo    String?
+  panNo       String?
+  aadharFront String?
+  aadharBack  String?
+  panPhoto    String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

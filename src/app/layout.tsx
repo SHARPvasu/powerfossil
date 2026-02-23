@@ -10,7 +10,6 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   manifest: "/manifest.json",
-  themeColor: "#6366f1",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -19,6 +18,10 @@ export const metadata: Metadata = {
   icons: {
     icon: "/favicon.ico",
   },
+};
+
+export const viewport = {
+  themeColor: "#6366f1",
 };
 
 export default function RootLayout({

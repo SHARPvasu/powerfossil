@@ -8,6 +8,11 @@ interface User {
     email: string
     role: string
     phone: string
+    aadharNo?: string
+    panNo?: string
+    aadharFront?: string
+    aadharBack?: string
+    panPhoto?: string
     createdAt: string
     _count?: { customers: number; policies: number; calls: number }
 }
@@ -235,10 +240,10 @@ export default function AdminPage() {
                             <tr>
                                 <th>User</th>
                                 <th>Role</th>
+                                <th>KYC Highlights</th>
                                 <th>Phone</th>
                                 <th>Customers</th>
                                 <th>Policies</th>
-                                <th>Calls</th>
                                 <th>Joined</th>
                                 <th></th>
                             </tr>
@@ -246,6 +251,7 @@ export default function AdminPage() {
                         <tbody>
                             {users.map(u => {
                                 const initials = u.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+                                const hasKyc = !!(u.aadharNo || u.panNo || u.aadharFront || u.panPhoto)
                                 return (
                                     <tr key={u.id}>
                                         <td>
@@ -261,6 +267,22 @@ export default function AdminPage() {
                                             <span style={{ padding: '3px 10px', borderRadius: 999, fontSize: '11px', fontWeight: 700, background: roleColors[u.role] || 'rgba(255,255,255,0.05)', color: roleTextColors[u.role] || 'var(--text-secondary)' }}>
                                                 {u.role}
                                             </span>
+                                        </td>
+                                        <td>
+                                            {hasKyc ? (
+                                                <div style={{ display: 'flex', gap: '6px' }}>
+                                                    {u.aadharNo && <span title={`Aadhar: ${u.aadharNo}`} style={{ cursor: 'help' }}>🆔</span>}
+                                                    {u.panNo && <span title={`PAN: ${u.panNo}`} style={{ cursor: 'help' }}>💳</span>}
+                                                    {(u.aadharFront || u.aadharBack || u.panPhoto) && (
+                                                        <div style={{ display: 'flex', gap: '4px' }}>
+                                                            {u.aadharFront && <a href={u.aadharFront} target="_blank" rel="noreferrer" title="Aadhar Front" style={{ fontSize: '12px', textDecoration: 'none' }}>🖼️</a>}
+                                                            {u.panPhoto && <a href={u.panPhoto} target="_blank" rel="noreferrer" title="PAN Photo" style={{ fontSize: '12px', textDecoration: 'none' }}>📄</a>}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Pending KYC</span>
+                                            )}
                                         </td>
                                         <td style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{u.phone || '—'}</td>
                                         <td style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{u._count?.customers || 0}</td>
