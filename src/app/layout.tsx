@@ -9,14 +9,20 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  title: "UV Insurance",
+  description: "Secure Insurance Management System",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "default",
+    statusBarStyle: "black-translucent",
     title: "UV Insurance",
+  },
+  formatDetection: {
+    telephone: false,
   },
   icons: {
     icon: "/favicon.ico",
+    apple: "/favicon.ico",
   },
 };
 

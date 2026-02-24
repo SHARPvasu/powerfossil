@@ -518,7 +518,7 @@ export default function NewCustomerPage() {
                                                 <button type="button" onClick={() => setAadharFront(null)} style={{ fontSize: '11px', color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}>Remove</button>
                                             </div>
                                         ) : (
-                                            <input type="file" accept="image/*,application/pdf,.heic,.heif" onChange={e => handleFileUpload(e, setAadharFront)} style={{ fontSize: '12px', color: 'var(--text-muted)', width: '100%' }} />
+                                            <input type="file" accept="image/*,application/pdf,.heic,.heif" capture="environment" onChange={e => handleFileUpload(e, setAadharFront)} style={{ fontSize: '12px', color: 'var(--text-muted)', width: '100%' }} />
                                         )}
                                     </div>
 
@@ -540,7 +540,7 @@ export default function NewCustomerPage() {
                                                 <button type="button" onClick={() => setAadharBack(null)} style={{ fontSize: '11px', color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}>Remove</button>
                                             </div>
                                         ) : (
-                                            <input type="file" accept="image/*,application/pdf,.heic,.heif" onChange={e => handleFileUpload(e, setAadharBack)} style={{ fontSize: '12px', color: 'var(--text-muted)', width: '100%' }} />
+                                            <input type="file" accept="image/*,application/pdf,.heic,.heif" capture="environment" onChange={e => handleFileUpload(e, setAadharBack)} style={{ fontSize: '12px', color: 'var(--text-muted)', width: '100%' }} />
                                         )}
                                     </div>
 
@@ -562,7 +562,7 @@ export default function NewCustomerPage() {
                                                 <button type="button" onClick={() => setPanPhoto(null)} style={{ fontSize: '11px', color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}>Remove</button>
                                             </div>
                                         ) : (
-                                            <input type="file" accept="image/*,application/pdf,.heic,.heif" onChange={e => handleFileUpload(e, setPanPhoto)} style={{ fontSize: '12px', color: 'var(--text-muted)', width: '100%' }} />
+                                            <input type="file" accept="image/*,application/pdf,.heic,.heif" capture="environment" onChange={e => handleFileUpload(e, setPanPhoto)} style={{ fontSize: '12px', color: 'var(--text-muted)', width: '100%' }} />
                                         )}
                                     </div>
                                 </div>

@@ -137,7 +137,7 @@ export default function ProfilePage() {
                                         ) : (
                                             <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Upload Front</span>
                                         )}
-                                        <input type="file" accept="image/*" onChange={e => handleFileChange(e, 'aadharFront')} style={{ position: 'absolute', opacity: 0, width: '100%', height: '100%', cursor: 'pointer' }} />
+                                        <input type="file" accept="image/*" capture="environment" onChange={e => handleFileChange(e, 'aadharFront')} style={{ position: 'absolute', opacity: 0, width: '100%', height: '100%', cursor: 'pointer' }} />
                                     </div>
                                 </div>
                                 <div>
@@ -148,7 +148,7 @@ export default function ProfilePage() {
                                         ) : (
                                             <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Upload Back</span>
                                         )}
-                                        <input type="file" accept="image/*" onChange={e => handleFileChange(e, 'aadharBack')} style={{ position: 'absolute', opacity: 0, width: '100%', height: '100%', cursor: 'pointer' }} />
+                                        <input type="file" accept="image/*" capture="environment" onChange={e => handleFileChange(e, 'aadharBack')} style={{ position: 'absolute', opacity: 0, width: '100%', height: '100%', cursor: 'pointer' }} />
                                     </div>
                                 </div>
                                 <div>
@@ -159,7 +159,7 @@ export default function ProfilePage() {
                                         ) : (
                                             <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Upload PAN</span>
                                         )}
-                                        <input type="file" accept="image/*" onChange={e => handleFileChange(e, 'panPhoto')} style={{ position: 'absolute', opacity: 0, width: '100%', height: '100%', cursor: 'pointer' }} />
+                                        <input type="file" accept="image/*" capture="environment" onChange={e => handleFileChange(e, 'panPhoto')} style={{ position: 'absolute', opacity: 0, width: '100%', height: '100%', cursor: 'pointer' }} />
                                     </div>
                                 </div>
                             </div>

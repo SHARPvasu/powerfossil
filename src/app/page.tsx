@@ -204,7 +204,6 @@ export default function LoginPage() {
                   disabled={isLocked}
                   autoComplete="current-password"
                 />
-                {/* Show/Hide toggle */}
                 <button
                   type="button"
                   onClick={() => setShowPassword(p => !p)}
@@ -215,7 +214,6 @@ export default function LoginPage() {
                     transition: 'color 0.2s ease',
                   }}
                   title={showPassword ? 'Hide password' : 'Show password'}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? (
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -231,7 +229,6 @@ export default function LoginPage() {
                   )}
                 </button>
               </div>
-              {/* Caps Lock warning */}
               {capsLock && (
                 <p style={{ fontSize: '11px', color: '#f59e0b', marginTop: '5px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /></svg>

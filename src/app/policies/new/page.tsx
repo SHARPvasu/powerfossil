@@ -432,7 +432,7 @@ function NewPolicyForm() {
                                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                                     <label style={{ padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', background: 'var(--bg-elevated)', border: '1px solid var(--border)', fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>
                                         {form.externalPolicyDoc ? 'Change File' : 'Choose File'}
-                                        <input type="file" accept="image/*,application/pdf" onChange={handleFileUpload} style={{ display: 'none' }} />
+                                        <input type="file" accept="image/*,application/pdf" capture="environment" onChange={handleFileUpload} style={{ display: 'none' }} />
                                     </label>
                                     {form.externalPolicyDoc && (
                                         <button type="button" onClick={() => setForm(p => ({ ...p, externalPolicyDoc: '' }))} style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>Remove</button>

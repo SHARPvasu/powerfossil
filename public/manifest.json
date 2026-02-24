@@ -1,23 +1,16 @@
 {
     "name": "UV Insurance Agency",
     "short_name": "UV Insurance",
-    "description": "Premium Insurance Management System",
-    "start_url": "/dashboard",
+    "description": "Insurance Management Application for Agents",
     "display": "standalone",
-    "background_color": "#0a0a0b",
-    "theme_color": "#6366f1",
+    "background_color": "#09090b",
+    "theme_color": "#09090b",
+    "start_url": "/",
     "icons": [
         {
-            "src": "https://res.cloudinary.com/dzt6vsmjt/image/upload/v1/assets/app_icon_192",
-            "sizes": "192x192",
-            "type": "image/png",
-            "purpose": "any maskable"
-        },
-        {
-            "src": "https://res.cloudinary.com/dzt6vsmjt/image/upload/v1/assets/app_icon_512",
-            "sizes": "512x512",
-            "type": "image/png",
-            "purpose": "any maskable"
+            "src": "/favicon.ico",
+            "sizes": "64x64 32x32 24x24 16x16",
+            "type": "image/x-icon"
         }
     ]
 }

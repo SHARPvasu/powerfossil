@@ -275,8 +275,9 @@ export default function AdminPage() {
                                                     {u.panNo && <span title={`PAN: ${u.panNo}`} style={{ cursor: 'help' }}>💳</span>}
                                                     {(u.aadharFront || u.aadharBack || u.panPhoto) && (
                                                         <div style={{ display: 'flex', gap: '4px' }}>
-                                                            {u.aadharFront && <a href={u.aadharFront} target="_blank" rel="noreferrer" title="Aadhar Front" style={{ fontSize: '12px', textDecoration: 'none' }}>🖼️</a>}
-                                                            {u.panPhoto && <a href={u.panPhoto} target="_blank" rel="noreferrer" title="PAN Photo" style={{ fontSize: '12px', textDecoration: 'none' }}>📄</a>}
+                                                            {u.aadharFront && <a href={u.aadharFront} target="_blank" rel="noreferrer" title="Aadhar Front" style={{ fontSize: '12px', textDecoration: 'none' }}>Front 🖼️</a>}
+                                                            {u.aadharBack && <a href={u.aadharBack} target="_blank" rel="noreferrer" title="Aadhar Back" style={{ fontSize: '12px', textDecoration: 'none' }}>Back 🖼️</a>}
+                                                            {u.panPhoto && <a href={u.panPhoto} target="_blank" rel="noreferrer" title="PAN Photo" style={{ fontSize: '12px', textDecoration: 'none' }}>PAN 📄</a>}
                                                         </div>
                                                     )}
                                                 </div>
