@@ -969,15 +969,15 @@ export default function CustomerDetailPage() {
                                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                                             <div>
                                                 <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>RC Book</label>
-                                                <input type="file" accept="image/*,.pdf" style={inputCls} onChange={e => handlePolicyFileChange(e, 'rcBookDoc')} />
+                                                <input type="file" accept="image/*,.pdf,.doc,.docx" style={inputCls} onChange={e => handlePolicyFileChange(e, 'rcBookDoc')} />
                                             </div>
                                             <div>
                                                 <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Aadhar Card</label>
-                                                <input type="file" accept="image/*,.pdf" style={inputCls} onChange={e => handlePolicyFileChange(e, 'aadharDoc')} />
+                                                <input type="file" accept="image/*,.pdf,.doc,.docx" style={inputCls} onChange={e => handlePolicyFileChange(e, 'aadharDoc')} />
                                             </div>
                                             <div style={{ gridColumn: '1 / -1' }}>
                                                 <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Previous Policy</label>
-                                                <input type="file" accept="image/*,.pdf" style={inputCls} onChange={e => handlePolicyFileChange(e, 'previousPolicyDoc')} />
+                                                <input type="file" accept="image/*,.pdf,.doc,.docx" style={inputCls} onChange={e => handlePolicyFileChange(e, 'previousPolicyDoc')} />
                                             </div>
                                         </div>
                                     </div>

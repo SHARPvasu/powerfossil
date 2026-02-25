@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
     const uploadTasks: Promise<{ name: string, type: string, url: string }>[] = []
 
     const processUpload = async (docStr: string, name: string, type: string) => {
-        if (docStr && (docStr.startsWith('data:image') || docStr.startsWith('data:application/pdf'))) {
+        if (docStr && docStr.startsWith('data:')) {
             const url = await uploadImage(docStr, 'policies')
             return { name, type, url }
         }
@@ -115,8 +115,9 @@ export async function POST(req: NextRequest) {
                 // Automatically create the linked document records for everything uploaded
                 documents: resolvedDocs.length > 0 ? {
                     create: resolvedDocs.map(doc => ({
-                        ...doc,
-                        customerId: policyData.customerId
+                        name: doc.name,
+                        type: doc.type,
+                        url: doc.url
                     }))
                 } : undefined
             } as Parameters<typeof prisma.policy.create>[0]['data'],
