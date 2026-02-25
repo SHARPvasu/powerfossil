@@ -59,54 +59,75 @@ export async function POST(req: NextRequest) {
     if (session.role === 'AUDITOR') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const data = await req.json()
-    const { externalPolicyDoc, externalDocUrl, ...policyData } = data
+    const { externalPolicyDoc, externalDocUrl, rcBookDoc, aadharDoc, previousPolicyDoc, ...policyData } = data
 
-    // Handle Cloudinary upload for the Policy Document
-    let documentUrl = externalDocUrl || null
-    const docToUpload = externalPolicyDoc
-    if (docToUpload && (docToUpload.startsWith('data:image') || docToUpload.startsWith('data:application/pdf'))) {
-        try {
-            documentUrl = await uploadImage(docToUpload, 'policies')
-        } catch (uploadError) {
-            console.error("Cloudinary policy document upload failed:", uploadError)
-            return NextResponse.json({ error: 'Failed to upload document' }, { status: 500 })
+    // Handle Cloudinary upload for the Policy Document and Supplementary Docs concurrently
+    const uploadTasks: Promise<{ name: string, type: string, url: string }>[] = []
+
+    const processUpload = async (docStr: string, name: string, type: string) => {
+        if (docStr && (docStr.startsWith('data:image') || docStr.startsWith('data:application/pdf'))) {
+            const url = await uploadImage(docStr, 'policies')
+            return { name, type, url }
         }
+        return null
     }
 
-    // Clean up the data — strip undefined/empty vehicle fields for non-motor policies
-    const cleanData: Record<string, unknown> = {
-        ...policyData,
-        familyMemberId: policyData.familyMemberId || null,
-        agentId: session.id,
-        // Ensure numeric fields are numbers
-        sumInsured: policyData.sumInsured !== '' && policyData.sumInsured != null ? parseFloat(String(policyData.sumInsured)) : null,
-        premium: policyData.premium !== '' && policyData.premium != null ? parseFloat(String(policyData.premium)) : 0,
-    }
-
-    // For non-motor policies, clear vehicle fields
-    if (policyData.type !== 'MOTOR') {
-        cleanData.vehicleNo = null
-        cleanData.vehicleModel = null
-        cleanData.vehicleYear = null
-    }
-
-    const policy = await prisma.policy.create({
-        data: {
-            ...cleanData,
-            // Automatically create the linked document record if a file was provided
-            documents: documentUrl ? {
-                create: {
-                    name: `Policy_Doc_${policyData.policyNumber || 'External'}`,
-                    url: documentUrl,
-                    type: 'POLICY',
-                    customerId: policyData.customerId
-                }
-            } : undefined
-        } as Parameters<typeof prisma.policy.create>[0]['data'],
-        include: {
-            documents: true
+    try {
+        if (externalDocUrl) {
+            uploadTasks.push(Promise.resolve({ name: `Policy_Doc_${policyData.policyNumber || 'External'}`, type: 'POLICY', url: externalDocUrl }))
+        } else if (externalPolicyDoc) {
+            uploadTasks.push(processUpload(externalPolicyDoc, `Policy_Doc_${policyData.policyNumber || 'External'}`, 'POLICY') as Promise<{ name: string, type: string, url: string }>)
         }
-    })
 
-    return NextResponse.json({ policy }, { status: 201 })
+        if (rcBookDoc) {
+            uploadTasks.push(processUpload(rcBookDoc, `RC_Book_${policyData.vehicleNo || 'Motor'}`, 'RC_BOOK') as Promise<{ name: string, type: string, url: string }>)
+        }
+        if (aadharDoc) {
+            uploadTasks.push(processUpload(aadharDoc, `Aadhar_Card_${policyData.policyNumber || 'Doc'}`, 'AADHAR') as Promise<{ name: string, type: string, url: string }>)
+        }
+        if (previousPolicyDoc) {
+            uploadTasks.push(processUpload(previousPolicyDoc, `Prev_Policy_${policyData.policyNumber || 'Doc'}`, 'PREVIOUS_POLICY') as Promise<{ name: string, type: string, url: string }>)
+        }
+
+        // Wait for all uploads to complete
+        const resolvedDocs = (await Promise.all(uploadTasks)).filter(Boolean)
+
+        // Clean up the data — strip undefined/empty vehicle fields for non-motor policies
+        const cleanData: Record<string, unknown> = {
+            ...policyData,
+            familyMemberId: policyData.familyMemberId || null,
+            agentId: session.id,
+            // Ensure numeric fields are numbers
+            sumInsured: policyData.sumInsured !== '' && policyData.sumInsured != null ? parseFloat(String(policyData.sumInsured)) : null,
+            premium: policyData.premium !== '' && policyData.premium != null ? parseFloat(String(policyData.premium)) : 0,
+        }
+
+        // For non-motor policies, clear vehicle fields
+        if (policyData.type !== 'MOTOR') {
+            cleanData.vehicleNo = null
+            cleanData.vehicleModel = null
+            cleanData.vehicleYear = null
+        }
+
+        const policy = await prisma.policy.create({
+            data: {
+                ...cleanData,
+                // Automatically create the linked document records for everything uploaded
+                documents: resolvedDocs.length > 0 ? {
+                    create: resolvedDocs.map(doc => ({
+                        ...doc,
+                        customerId: policyData.customerId
+                    }))
+                } : undefined
+            } as Parameters<typeof prisma.policy.create>[0]['data'],
+            include: {
+                documents: true
+            }
+        })
+
+        return NextResponse.json({ policy }, { status: 201 })
+    } catch (error) {
+        console.error("Policy/Document creation failed:", error)
+        return NextResponse.json({ error: 'Failed to create policy and upload documents' }, { status: 500 })
+    }
 }

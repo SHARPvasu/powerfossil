@@ -51,10 +51,21 @@ export default function CustomerDetailPage() {
     const [policyForm, setPolicyForm] = useState({
         policyNumber: '', type: 'HEALTH', subType: 'INDIVIDUAL', company: '', planName: '',
         sumInsured: '', premium: '', startDate: '', endDate: '', status: 'ACTIVE',
-        externalDocUrl: '', familyMemberId: '',
+        externalDocUrl: '', externalPolicyDoc: '', familyMemberId: '',
         vehicleNo: '', vehicleModel: '', vehicleYear: '',
-        nominee: '', nomineeRelation: ''
+        nominee: '', nomineeRelation: '',
+        rcBookDoc: '', aadharDoc: '', previousPolicyDoc: ''
     })
+
+    const handlePolicyFileChange = (e: React.ChangeEvent<HTMLInputElement>, fieldName: 'externalPolicyDoc' | 'rcBookDoc' | 'aadharDoc' | 'previousPolicyDoc') => {
+        const file = e.target.files?.[0]
+        if (!file) return
+        const reader = new FileReader()
+        reader.onloadend = () => {
+            setPolicyForm(prev => ({ ...prev, [fieldName]: reader.result as string }))
+        }
+        reader.readAsDataURL(file)
+    }
 
     // KYC Lightbox
     const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
@@ -171,9 +182,10 @@ export default function CustomerDetailPage() {
                 setPolicyForm({
                     policyNumber: '', type: 'HEALTH', subType: 'INDIVIDUAL', company: '', planName: '',
                     sumInsured: '', premium: '', startDate: '', endDate: '', status: 'ACTIVE',
-                    externalDocUrl: '', familyMemberId: '',
+                    externalDocUrl: '', externalPolicyDoc: '', familyMemberId: '',
                     vehicleNo: '', vehicleModel: '', vehicleYear: '',
-                    nominee: '', nomineeRelation: ''
+                    nominee: '', nomineeRelation: '',
+                    rcBookDoc: '', aadharDoc: '', previousPolicyDoc: ''
                 })
             } else {
                 let errorMsg = 'Failed to save policy'
@@ -544,6 +556,25 @@ export default function CustomerDetailPage() {
                                             <span className={`badge badge-${pol.status.toLowerCase()}`}>{pol.status}</span>
                                             <Link href={`/policies/${pol.id}`} style={{ color: 'var(--accent-blue)', fontSize: '12px', textDecoration: 'none', fontWeight: 600 }}>View →</Link>
                                         </div>
+                                        {/* Render Attached Documents */}
+                                        {((pol as any).documents?.length > 0) && (
+                                            <div style={{ width: '100%', borderTop: '1px solid var(--border)', paddingTop: '12px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                                {(pol as any).documents.filter((d: any) => d.type !== 'POLICY').map((doc: any) => (
+                                                    <div key={doc.id} style={{ display: 'inline-flex', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '4px 10px', borderRadius: '6px', border: '1px solid var(--border)' }}>
+                                                        <span style={{ fontSize: '10px', color: 'var(--text-muted)', marginRight: '8px' }}>
+                                                            {doc.type === 'RC_BOOK' ? 'RC Book' : doc.type === 'AADHAR' ? 'Aadhar Card' : doc.type === 'PREVIOUS_POLICY' ? 'Prev. Policy' : doc.name}
+                                                        </span>
+                                                        {userRole === 'ADMIN' ? (
+                                                            <a href={doc.url} target="_blank" rel="noopener noreferrer" download style={{ fontSize: '10px', color: 'var(--accent-blue)', textDecoration: 'none', fontWeight: 600 }}>
+                                                                ⬇ Download
+                                                            </a>
+                                                        ) : (
+                                                            <span style={{ fontSize: '10px', color: 'var(--text-muted)', opacity: 0.5, cursor: 'not-allowed' }}>🔒 Admin Only</span>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                 )
                             })}
@@ -931,6 +962,22 @@ export default function CustomerDetailPage() {
                                             <div>
                                                 <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Vehicle Year</label>
                                                 <input type="text" style={inputCls} placeholder="2022" value={policyForm.vehicleYear} onChange={e => setPolicyForm(p => ({ ...p, vehicleYear: e.target.value }))} maxLength={4} />
+                                            </div>
+                                        </div>
+
+                                        <p style={{ fontSize: '12px', fontWeight: 700, color: '#3b82f6', marginTop: '16px', marginBottom: '12px' }}>📎 Motor Documents</p>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                            <div>
+                                                <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>RC Book</label>
+                                                <input type="file" accept="image/*,.pdf" style={inputCls} onChange={e => handlePolicyFileChange(e, 'rcBookDoc')} />
+                                            </div>
+                                            <div>
+                                                <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Aadhar Card</label>
+                                                <input type="file" accept="image/*,.pdf" style={inputCls} onChange={e => handlePolicyFileChange(e, 'aadharDoc')} />
+                                            </div>
+                                            <div style={{ gridColumn: '1 / -1' }}>
+                                                <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Previous Policy</label>
+                                                <input type="file" accept="image/*,.pdf" style={inputCls} onChange={e => handlePolicyFileChange(e, 'previousPolicyDoc')} />
                                             </div>
                                         </div>
                                     </div>
