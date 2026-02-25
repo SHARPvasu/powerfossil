@@ -21,12 +21,7 @@ export default function NewCustomerPage() {
     const [cameraOpen, setCameraOpen] = useState(false)
     const [livePhotoData, setLivePhotoData] = useState<string | null>(null)
     const streamRef = useRef<MediaStream | null>(null)
-
-    // OTP Verification States
-    const [otpModalOpen, setOtpModalOpen] = useState(false)
-    const [otpCode, setOtpCode] = useState('')
-    const [devOtpCode, setDevOtpCode] = useState<string | null>(null)
-    const [resendLoading, setResendLoading] = useState(false)
+    const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user')
 
     // Document Upload States
     const [aadharFront, setAadharFront] = useState<string | null>(null)
@@ -38,17 +33,19 @@ export default function NewCustomerPage() {
         gender: '', address: '', city: '', state: '', pincode: '',
         occupation: '', income: '', height: '', weight: '',
         aadharNo: '', panNo: '', kycStatus: 'PENDING',
+        stage: 'LEAD', leadSource: ''
     })
 
     // Family Members State
-    const [familyMembers, setFamilyMembers] = useState<any[]>([])
+    interface FamilyMember { name: string; relation: string; dob: string; gender: string; insured: boolean }
+    const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([])
 
     // Initial Policy State
     const [addInitialPolicy, setAddInitialPolicy] = useState(false)
     const [initialPolicy, setInitialPolicy] = useState({
         policyNumber: `POL-${Date.now()}`,
         type: 'HEALTH',
-        subType: 'Individual',
+        subType: 'INDIVIDUAL',
         company: '',
         planName: '',
         sumInsured: '',
@@ -66,8 +63,6 @@ export default function NewCustomerPage() {
         externalPolicyDoc: '',
     })
 
-    // Custom Plan for Policy
-    const [customPlan, setCustomPlan] = useState('')
     const [userRole, setUserRole] = useState<string | null>(null)
 
     useEffect(() => {
@@ -89,27 +84,51 @@ export default function NewCustomerPage() {
         )
     }
 
-    async function openCamera() {
+    async function openCamera(mode?: 'user' | 'environment') {
+        // Stop any existing stream
+        streamRef.current?.getTracks().forEach(t => t.stop())
+        streamRef.current = null
+
+        const selectedMode = mode || facingMode
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true })
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: { ideal: selectedMode }, width: { ideal: 1280 }, height: { ideal: 720 } }
+            })
             streamRef.current = stream
             if (webcamRef.current) {
                 webcamRef.current.srcObject = stream
                 webcamRef.current.play()
             }
+            setFacingMode(selectedMode)
             setCameraOpen(true)
         } catch {
-            alert('Could not access camera. Please check permissions.')
+            try {
+                // Fallback without facingMode constraint
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true })
+                streamRef.current = stream
+                if (webcamRef.current) {
+                    webcamRef.current.srcObject = stream
+                    webcamRef.current.play()
+                }
+                setCameraOpen(true)
+            } catch {
+                alert('Could not access camera. Please check permissions and try again.')
+            }
         }
+    }
+
+    async function toggleCamera() {
+        const newMode = facingMode === 'user' ? 'environment' : 'user'
+        await openCamera(newMode)
     }
 
     function capturePhoto() {
         if (webcamRef.current && canvasRef.current) {
             const ctx = canvasRef.current.getContext('2d')
-            canvasRef.current.width = webcamRef.current.videoWidth
-            canvasRef.current.height = webcamRef.current.videoHeight
+            canvasRef.current.width = webcamRef.current.videoWidth || 640
+            canvasRef.current.height = webcamRef.current.videoHeight || 480
             ctx?.drawImage(webcamRef.current, 0, 0)
-            setLivePhotoData(canvasRef.current.toDataURL('image/jpeg', 0.8))
+            setLivePhotoData(canvasRef.current.toDataURL('image/jpeg', 0.85))
             closeCamera()
         }
     }
@@ -120,22 +139,18 @@ export default function NewCustomerPage() {
         setCameraOpen(false)
     }
 
-    // Generic file to base64 converter
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, setter: (val: string) => void) => {
         const file = e.target.files?.[0]
         if (!file) return
-        if (file.size > 2 * 1024 * 1024) {
-            alert('File size must be less than 2MB')
+        if (file.size > 5 * 1024 * 1024) {
+            alert('File size must be less than 5MB')
             return
         }
         const reader = new FileReader()
-        reader.onloadend = () => {
-            setter(reader.result as string)
-        }
+        reader.onloadend = () => { setter(reader.result as string) }
         reader.readAsDataURL(file)
     }
 
-    // Family Member Handlers
     function addFamilyMember() {
         setFamilyMembers([...familyMembers, { name: '', relation: 'Spouse', dob: '', gender: 'Female', insured: true }])
     }
@@ -144,13 +159,12 @@ export default function NewCustomerPage() {
         setFamilyMembers(familyMembers.filter((_, i) => i !== idx))
     }
 
-    function updateFamilyMember(idx: number, k: string, v: any) {
+    function updateFamilyMember(idx: number, k: string, v: string | boolean) {
         const next = [...familyMembers]
         next[idx] = { ...next[idx], [k]: v }
         setFamilyMembers(next)
     }
 
-    // Policy Handler
     function updatePolicy(k: string, v: string) {
         setInitialPolicy(p => {
             const next = { ...p, [k]: v }
@@ -160,6 +174,7 @@ export default function NewCustomerPage() {
         })
     }
 
+    // Direct submit without OTP
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault()
         if (!form.firstName || !form.lastName || !form.phone) {
@@ -170,78 +185,6 @@ export default function NewCustomerPage() {
         setError('')
 
         try {
-            // STEP 1: Dispatch OTP
-            const otpRes = await fetch('/api/otp/send', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ target: form.phone, type: 'phone' })
-            })
-            const otpData = await otpRes.json()
-            if (!otpRes.ok) {
-                setError(otpData.error || 'Failed to send OTP')
-                setLoading(false)
-                return
-            }
-
-            // Show the OTP Modal to proceed to step 2 verification
-            setLoading(false)
-            setOtpModalOpen(true)
-            if (otpData.code) {
-                // In dev mode, we can show a hint or even pre-fill it
-                setDevOtpCode(otpData.code)
-            }
-
-        } catch {
-            setError('Network error during OTP dispatch')
-            setLoading(false)
-        }
-    }
-
-    async function handleResendOtp() {
-        setResendLoading(true)
-        setDevOtpCode(null)
-        try {
-            const otpRes = await fetch('/api/otp/send', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ target: form.phone, type: 'phone' })
-            })
-            const otpData = await otpRes.json()
-            if (!otpRes.ok) {
-                alert(otpData.error || 'Failed to resend OTP')
-            } else if (otpData.code) {
-                setDevOtpCode(otpData.code)
-            }
-        } catch {
-            alert('Network error during OTP resend')
-        } finally {
-            setResendLoading(false)
-        }
-    }
-
-    async function verifyAndSubmit() {
-        if (!otpCode || otpCode.length < 6) {
-            alert('Please enter a 6-digit OTP code.')
-            return
-        }
-        setLoading(true)
-        setError('')
-
-        try {
-            // STEP 2: Verify OTP
-            const verifyRes = await fetch('/api/otp/verify', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ target: form.phone, code: otpCode })
-            })
-            const verifyData = await verifyRes.json()
-            if (!verifyRes.ok) {
-                setError(verifyData.error || 'Invalid OTP code')
-                setLoading(false)
-                return
-            }
-
-            // STEP 3: Complete Customer Creation Profile
             const res = await fetch('/api/customers', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -257,7 +200,7 @@ export default function NewCustomerPage() {
                     familyMembers,
                     initialPolicy: addInitialPolicy ? {
                         ...initialPolicy,
-                        planName: initialPolicy.planName === '__custom__' ? customPlan : initialPolicy.planName,
+                        planName: initialPolicy.planName,
                         sumInsured: initialPolicy.sumInsured ? parseFloat(initialPolicy.sumInsured) : null,
                         premium: initialPolicy.premium ? parseFloat(initialPolicy.premium) : 0,
                         tags: initialPolicy.tags ? JSON.stringify(initialPolicy.tags.split(',').map(t => t.trim()).filter(Boolean)) : null,
@@ -267,15 +210,21 @@ export default function NewCustomerPage() {
             const data = await res.json()
             if (!res.ok) {
                 setError(data.error || 'Failed to create customer')
-                setLoading(false)
             } else {
-                setOtpModalOpen(false)
                 router.push(`/customers/${data.customer.id}`)
             }
         } catch {
-            setError('Network error during final submission')
+            setError('Network error. Please try again.')
+        } finally {
             setLoading(false)
         }
+    }
+
+    const TAB_ORDER: Array<'basic' | 'family' | 'kyc' | 'policy' | 'health'> = ['basic', 'family', 'kyc', 'policy', 'health']
+    const tabIndex = TAB_ORDER.indexOf(tab)
+
+    function goNext() {
+        if (tabIndex < TAB_ORDER.length - 1) setTab(TAB_ORDER[tabIndex + 1])
     }
 
     const tabStyle = (t: string) => ({
@@ -285,6 +234,7 @@ export default function NewCustomerPage() {
         border: 'none',
         transition: 'all 0.2s ease',
     })
+
 
     return (
         <div className="animate-fade-in" style={{ padding: '32px', maxWidth: '900px' }}>
@@ -305,24 +255,44 @@ export default function NewCustomerPage() {
                 </div>
             ) : (
                 <>
-                    {/* Tabs */}
-                    <div style={{
-                        display: 'flex', gap: '4px', marginBottom: '24px',
-                        background: 'var(--bg-card)', borderRadius: '12px', padding: '4px',
-                        border: '1px solid var(--border)', width: 'fit-content',
-                    }}>
-                        <button type="button" style={tabStyle('basic')} onClick={() => setTab('basic')}>Basic Info</button>
-                        <button type="button" style={tabStyle('family')} onClick={() => setTab('family')}>Family Details</button>
-                        <button type="button" style={tabStyle('kyc')} onClick={() => setTab('kyc')}>KYC & Documents</button>
-                        <button type="button" style={tabStyle('policy')} onClick={() => setTab('policy')}>Initial Policy</button>
-                        <button type="button" style={tabStyle('health')} onClick={() => setTab('health')}>Health & Notes</button>
+                    {/* Tab Progress Indicator */}
+                    <div style={{ display: 'flex', gap: '4px', marginBottom: '24px', background: 'var(--bg-card)', borderRadius: '12px', padding: '4px', border: '1px solid var(--border)', width: 'fit-content' }}>
+                        <button type="button" style={tabStyle('basic')} onClick={() => setTab('basic')}>1. Basic Info</button>
+                        <button type="button" style={tabStyle('family')} onClick={() => setTab('family')}>2. Family</button>
+                        <button type="button" style={tabStyle('kyc')} onClick={() => setTab('kyc')}>3. KYC</button>
+                        <button type="button" style={tabStyle('policy')} onClick={() => setTab('policy')}>4. Policy</button>
+                        <button type="button" style={tabStyle('health')} onClick={() => setTab('health')}>5. Health</button>
                     </div>
 
                     <form onSubmit={handleSubmit}>
                         {/* Basic Info Tab */}
                         {tab === 'basic' && (
                             <div className="animate-fade-in" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '16px', padding: '28px' }}>
+                                <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '20px' }}>Personal Information</h3>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                    <div>
+                                        <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Pipeline Stage</label>
+                                        <select className="input-dark" value={form.stage} onChange={e => updateField('stage', e.target.value)}>
+                                            <option value="LEAD">LEAD</option>
+                                            <option value="PITCHED">PITCHED</option>
+                                            <option value="INTERESTED">INTERESTED</option>
+                                            <option value="CONVERTED">CONVERTED</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Lead Source</label>
+                                        <select className="input-dark" value={form.leadSource} onChange={e => updateField('leadSource', e.target.value)}>
+                                            <option value="">Select source...</option>
+                                            <option value="WALK_IN">Walk-in</option>
+                                            <option value="REFERRAL">Referral</option>
+                                            <option value="COLD_CALL">Cold Call</option>
+                                            <option value="SOCIAL_MEDIA">Social Media</option>
+                                            <option value="WEBSITE">Website</option>
+                                            <option value="CAMP">Camp/Event</option>
+                                            <option value="OTHER">Other</option>
+                                        </select>
+                                    </div>
+                                    <div style={{ gridColumn: '1 / -1', height: '1px', background: 'var(--border)', margin: '8px 0' }} />
                                     <div>
                                         <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>First Name *</label>
                                         <input className="input-dark" value={form.firstName} onChange={e => updateField('firstName', e.target.value)} placeholder="Rahul" required />
@@ -379,6 +349,7 @@ export default function NewCustomerPage() {
                                         <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Annual Income</label>
                                         <input className="input-dark" value={form.income} onChange={e => updateField('income', e.target.value)} placeholder="₹ 5,00,000" />
                                     </div>
+
                                 </div>
                             </div>
                         )}
@@ -458,26 +429,24 @@ export default function NewCustomerPage() {
                                         <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>PAN Number</label>
                                         <input className="input-dark" value={form.panNo} onChange={e => updateField('panNo', e.target.value.toUpperCase())} placeholder="ABCDE1234F" maxLength={10} />
                                     </div>
-                                    <div>
-                                        <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>KYC Status</label>
-                                        <select className="input-dark" value={form.kycStatus} onChange={e => updateField('kycStatus', e.target.value)}>
-                                            <option value="PENDING">Pending</option>
-                                            <option value="VERIFIED">Verified</option>
-                                            <option value="REJECTED">Rejected</option>
-                                        </select>
-                                    </div>
+                                    {/* KYC Status - only show VERIFIED/REJECTED for admin */}
+                                    {userRole === 'ADMIN' && (
+                                        <div>
+                                            <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>KYC Status</label>
+                                            <select className="input-dark" value={form.kycStatus} onChange={e => updateField('kycStatus', e.target.value)}>
+                                                <option value="PENDING">Pending</option>
+                                                <option value="VERIFIED">Verified</option>
+                                                <option value="REJECTED">Rejected</option>
+                                            </select>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Live Photo */}
                                 <div style={{ marginBottom: '24px' }}>
-                                    <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Live Photo</label>
+                                    <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Live Photo (Customer Selfie)</label>
                                     <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
-                                        <div style={{
-                                            width: 100, height: 120, borderRadius: '10px',
-                                            border: '2px dashed var(--border)',
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            overflow: 'hidden', background: 'rgba(255,255,255,0.02)',
-                                        }}>
+                                        <div style={{ width: 100, height: 120, borderRadius: '10px', border: '2px dashed var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', background: 'rgba(255,255,255,0.02)' }}>
                                             {livePhotoData ? (
                                                 /* eslint-disable-next-line @next/next/no-img-element */
                                                 <img src={livePhotoData} alt="Live" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -486,11 +455,14 @@ export default function NewCustomerPage() {
                                             )}
                                         </div>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                            <button type="button" onClick={openCamera} className="btn-glow" style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', cursor: 'pointer', color: 'white', fontSize: '12px', fontWeight: 600 }}>
-                                                📷 Open Camera
+                                            <button type="button" onClick={() => openCamera('user')} className="btn-glow" style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', cursor: 'pointer', color: 'white', fontSize: '12px', fontWeight: 600 }}>
+                                                📷 Front Camera (Selfie)
+                                            </button>
+                                            <button type="button" onClick={() => openCamera('environment')} style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--border)', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 600, background: 'none' }}>
+                                                📷 Rear Camera
                                             </button>
                                             {livePhotoData && (
-                                                <button type="button" onClick={() => setLivePhotoData(null)} style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--border)', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '12px', background: 'none' }}>
+                                                <button type="button" onClick={() => setLivePhotoData(null)} style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--border)', cursor: 'pointer', color: '#ef4444', fontSize: '12px', background: 'none' }}>
                                                     Remove Photo
                                                 </button>
                                             )}
@@ -502,7 +474,7 @@ export default function NewCustomerPage() {
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' }}>
                                     {/* Aadhar Front */}
                                     <div style={{ background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '12px', border: '1px dashed var(--border)' }}>
-                                        <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', display: 'block', marginBottom: '8px' }}>Aadhar Card (Front)</label>
+                                        <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', display: 'block', marginBottom: '8px' }}>Aadhar Card (Front) 📸</label>
                                         {aadharFront ? (
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                                 <div style={{ height: '80px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border)', background: 'rgba(255,255,255,0.02)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -512,19 +484,20 @@ export default function NewCustomerPage() {
                                                             <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>PDF Document</span>
                                                         </div>
                                                     ) : (
+                                                        /* eslint-disable-next-line @next/next/no-img-element */
                                                         <img src={aadharFront} alt="Aadhar Front" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                                     )}
                                                 </div>
                                                 <button type="button" onClick={() => setAadharFront(null)} style={{ fontSize: '11px', color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}>Remove</button>
                                             </div>
                                         ) : (
-                                            <input type="file" accept="image/*,application/pdf,.heic,.heif" capture="environment" onChange={e => handleFileUpload(e, setAadharFront)} style={{ fontSize: '12px', color: 'var(--text-muted)', width: '100%' }} />
+                                            <input type="file" accept="image/*,application/pdf,.heic,.heif" onChange={e => handleFileUpload(e, setAadharFront)} style={{ fontSize: '12px', color: 'var(--text-muted)', width: '100%' }} />
                                         )}
                                     </div>
 
                                     {/* Aadhar Back */}
                                     <div style={{ background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '12px', border: '1px dashed var(--border)' }}>
-                                        <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', display: 'block', marginBottom: '8px' }}>Aadhar Card (Back)</label>
+                                        <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', display: 'block', marginBottom: '8px' }}>Aadhar Card (Back) 📸</label>
                                         {aadharBack ? (
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                                 <div style={{ height: '80px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border)', background: 'rgba(255,255,255,0.02)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -534,19 +507,20 @@ export default function NewCustomerPage() {
                                                             <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>PDF Document</span>
                                                         </div>
                                                     ) : (
+                                                        /* eslint-disable-next-line @next/next/no-img-element */
                                                         <img src={aadharBack} alt="Aadhar Back" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                                     )}
                                                 </div>
                                                 <button type="button" onClick={() => setAadharBack(null)} style={{ fontSize: '11px', color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}>Remove</button>
                                             </div>
                                         ) : (
-                                            <input type="file" accept="image/*,application/pdf,.heic,.heif" capture="environment" onChange={e => handleFileUpload(e, setAadharBack)} style={{ fontSize: '12px', color: 'var(--text-muted)', width: '100%' }} />
+                                            <input type="file" accept="image/*,application/pdf,.heic,.heif" onChange={e => handleFileUpload(e, setAadharBack)} style={{ fontSize: '12px', color: 'var(--text-muted)', width: '100%' }} />
                                         )}
                                     </div>
 
                                     {/* PAN Photo */}
                                     <div style={{ background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '12px', border: '1px dashed var(--border)', gridColumn: '1 / -1' }}>
-                                        <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', display: 'block', marginBottom: '8px' }}>PAN Card Document</label>
+                                        <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', display: 'block', marginBottom: '8px' }}>PAN Card Document 📸</label>
                                         {panPhoto ? (
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                                 <div style={{ height: '120px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border)', maxWidth: '200px', background: 'rgba(255,255,255,0.02)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -556,13 +530,14 @@ export default function NewCustomerPage() {
                                                             <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>PDF Document</span>
                                                         </div>
                                                     ) : (
+                                                        /* eslint-disable-next-line @next/next/no-img-element */
                                                         <img src={panPhoto} alt="PAN Card" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                                     )}
                                                 </div>
                                                 <button type="button" onClick={() => setPanPhoto(null)} style={{ fontSize: '11px', color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}>Remove</button>
                                             </div>
                                         ) : (
-                                            <input type="file" accept="image/*,application/pdf,.heic,.heif" capture="environment" onChange={e => handleFileUpload(e, setPanPhoto)} style={{ fontSize: '12px', color: 'var(--text-muted)', width: '100%' }} />
+                                            <input type="file" accept="image/*,application/pdf,.heic,.heif" onChange={e => handleFileUpload(e, setPanPhoto)} style={{ fontSize: '12px', color: 'var(--text-muted)', width: '100%' }} />
                                         )}
                                     </div>
                                 </div>
@@ -570,13 +545,18 @@ export default function NewCustomerPage() {
                                 {/* Camera Modal */}
                                 {cameraOpen && (
                                     <div className="modal-backdrop" onClick={closeCamera}>
-                                        <div style={{ background: 'var(--bg-card)', borderRadius: '16px', padding: '24px', border: '1px solid var(--border)' }} onClick={e => e.stopPropagation()}>
-                                            <h3 style={{ color: 'var(--text-primary)', marginBottom: '16px', fontWeight: 700 }}>Live Photo Capture</h3>
-                                            <video ref={webcamRef} style={{ borderRadius: '10px', maxWidth: '400px', width: '100%' }} />
+                                        <div style={{ background: 'var(--bg-card)', borderRadius: '16px', padding: '24px', border: '1px solid var(--border)', maxWidth: '480px', width: '90vw' }} onClick={e => e.stopPropagation()}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                                                <h3 style={{ color: 'var(--text-primary)', fontWeight: 700 }}>Live Photo Capture</h3>
+                                                <button type="button" onClick={toggleCamera} style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '12px' }}>
+                                                    🔄 {facingMode === 'user' ? 'Switch to Rear' : 'Switch to Front'}
+                                                </button>
+                                            </div>
+                                            <video ref={webcamRef} style={{ borderRadius: '10px', width: '100%', maxHeight: '360px', background: '#000', transform: facingMode === 'user' ? 'scaleX(-1)' : 'none' }} autoPlay playsInline muted />
                                             <canvas ref={canvasRef} style={{ display: 'none' }} />
                                             <div style={{ display: 'flex', gap: '12px', marginTop: '16px', justifyContent: 'center' }}>
-                                                <button type="button" onClick={capturePhoto} className="btn-glow" style={{ padding: '10px 24px', borderRadius: '10px', border: 'none', cursor: 'pointer', color: 'white', fontSize: '13px', fontWeight: 600 }}>
-                                                    📸 Capture
+                                                <button type="button" onClick={capturePhoto} className="btn-glow" style={{ padding: '10px 32px', borderRadius: '10px', border: 'none', cursor: 'pointer', color: 'white', fontSize: '13px', fontWeight: 700 }}>
+                                                    📸 Capture Photo
                                                 </button>
                                                 <button type="button" onClick={closeCamera} style={{ padding: '10px 24px', borderRadius: '10px', border: '1px solid var(--border)', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '13px', background: 'none' }}>
                                                     Cancel
@@ -606,9 +586,20 @@ export default function NewCustomerPage() {
                                                     color: initialPolicy.type === t ? 'white' : 'var(--text-muted)',
                                                     border: 'none', transition: 'all 0.2s'
                                                 }}>
-                                                    {t}
+                                                    {t === 'HEALTH' ? '🏥' : t === 'MOTOR' ? '🚗' : t === 'LIFE' ? '❤️' : '📋'} {t}
                                                 </button>
                                             ))}
+                                        </div>
+
+                                        {/* Sub-type */}
+                                        <div>
+                                            <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px', fontWeight: 600 }}>SUB-TYPE</label>
+                                            <select className="input-dark" value={initialPolicy.subType} onChange={e => updatePolicy('subType', e.target.value)}>
+                                                {initialPolicy.type === 'HEALTH' && <><option value="INDIVIDUAL">Individual</option><option value="FAMILY_FLOATER">Family Floater</option><option value="GROUP">Group</option></>}
+                                                {initialPolicy.type === 'MOTOR' && <><option value="COMPREHENSIVE">Comprehensive</option><option value="THIRD_PARTY">Third Party</option></>}
+                                                {initialPolicy.type === 'LIFE' && <><option value="ULIP">ULIP</option><option value="ENDOWMENT">Endowment</option></>}
+                                                {initialPolicy.type === 'TERM' && <><option value="PURE_TERM">Pure Term</option><option value="RETURN_OF_PREMIUM">Return of Premium</option></>}
+                                            </select>
                                         </div>
 
                                         <div>
@@ -627,15 +618,25 @@ export default function NewCustomerPage() {
                                             <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px', fontWeight: 600 }}>PREMIUM (₹)</label>
                                             <input className="input-dark" type="number" value={initialPolicy.premium} onChange={e => updatePolicy('premium', e.target.value)} placeholder="15000" />
                                         </div>
+                                        {/* Sum insured hidden for Third Party */}
+                                        {!(initialPolicy.type === 'MOTOR' && initialPolicy.subType === 'THIRD_PARTY') && (
+                                            <div>
+                                                <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px', fontWeight: 600 }}>
+                                                    {initialPolicy.type === 'MOTOR' ? 'IDV — Insured Declared Value (₹)' : 'SUM INSURED (₹)'}
+                                                </label>
+                                                <input className="input-dark" type="number" value={initialPolicy.sumInsured} onChange={e => updatePolicy('sumInsured', e.target.value)} placeholder={initialPolicy.type === 'MOTOR' ? '2,50,000' : '5,00,000'} />
+                                            </div>
+                                        )}
                                         <div>
                                             <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px', fontWeight: 600 }}>START DATE</label>
                                             <input className="input-dark" type="date" value={initialPolicy.startDate} onChange={e => updatePolicy('startDate', e.target.value)} />
                                         </div>
                                         <div>
-                                            <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px', fontWeight: 600 }}>END DATE</label>
+                                            <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px', fontWeight: 600 }}>END DATE (Expiry/Renewal)</label>
                                             <input className="input-dark" type="date" value={initialPolicy.endDate} onChange={e => updatePolicy('endDate', e.target.value)} />
                                         </div>
 
+                                        {/* Motor specific */}
                                         {initialPolicy.type === 'MOTOR' && (
                                             <>
                                                 <div>
@@ -646,9 +647,14 @@ export default function NewCustomerPage() {
                                                     <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px', fontWeight: 600 }}>VEHICLE MODEL</label>
                                                     <input className="input-dark" value={initialPolicy.vehicleModel} onChange={e => updatePolicy('vehicleModel', e.target.value)} placeholder="Honda City" />
                                                 </div>
+                                                <div>
+                                                    <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px', fontWeight: 600 }}>VEHICLE YEAR</label>
+                                                    <input className="input-dark" value={initialPolicy.vehicleYear} onChange={e => updatePolicy('vehicleYear', e.target.value)} placeholder="2022" maxLength={4} />
+                                                </div>
                                             </>
                                         )}
 
+                                        {/* Life/Term specific */}
                                         {(initialPolicy.type === 'LIFE' || initialPolicy.type === 'TERM') && (
                                             <>
                                                 <div>
@@ -669,7 +675,21 @@ export default function NewCustomerPage() {
                         {/* Health Tab */}
                         {tab === 'health' && (
                             <div className="animate-fade-in" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '16px', padding: '28px' }}>
-                                <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '16px' }}>Pre-Existing Medical Conditions</h3>
+                                <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '16px' }}>Health Information</h3>
+
+                                {/* Height & Weight */}
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px', padding: '16px', background: 'rgba(255,255,255,0.02)', borderRadius: '10px', border: '1px solid var(--border)' }}>
+                                    <div>
+                                        <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Height</label>
+                                        <input className="input-dark" value={form.height} onChange={e => updateField('height', e.target.value)} placeholder="e.g. 5 ft 8 in" />
+                                    </div>
+                                    <div>
+                                        <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Weight</label>
+                                        <input className="input-dark" value={form.weight} onChange={e => updateField('weight', e.target.value)} placeholder="e.g. 72 kg" />
+                                    </div>
+                                </div>
+
+                                <h4 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '12px' }}>Pre-Existing Medical Conditions</h4>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
                                     {PRE_EXISTING.map(cond => (
                                         <button
@@ -722,13 +742,13 @@ export default function NewCustomerPage() {
                                 Cancel
                             </button>
                             <div style={{ display: 'flex', gap: '10px' }}>
+                                {tabIndex > 0 && (
+                                    <button type="button" onClick={() => setTab(TAB_ORDER[tabIndex - 1])} style={{ padding: '10px 20px', borderRadius: '10px', border: '1px solid var(--border)', cursor: 'pointer', color: 'var(--text-muted)', background: 'none', fontSize: '13px' }}>
+                                        ← Back
+                                    </button>
+                                )}
                                 {tab !== 'health' && (
-                                    <button type="button" onClick={() => {
-                                        if (tab === 'basic') setTab('family')
-                                        else if (tab === 'family') setTab('kyc')
-                                        else if (tab === 'kyc') setTab('policy')
-                                        else if (tab === 'policy') setTab('health')
-                                    }} style={{ padding: '10px 20px', borderRadius: '10px', border: '1px solid rgba(99,102,241,0.3)', cursor: 'pointer', color: 'var(--accent-blue)', background: 'rgba(99,102,241,0.1)', fontSize: '13px', fontWeight: 600 }}>
+                                    <button type="button" onClick={goNext} style={{ padding: '10px 20px', borderRadius: '10px', border: '1px solid rgba(99,102,241,0.3)', cursor: 'pointer', color: 'var(--accent-blue)', background: 'rgba(99,102,241,0.1)', fontSize: '13px', fontWeight: 600 }}>
                                         Next →
                                     </button>
                                 )}
@@ -738,56 +758,6 @@ export default function NewCustomerPage() {
                             </div>
                         </div>
                     </form>
-
-                    {/* OTP Verification Modal */}
-                    {otpModalOpen && (
-                        <div className="modal-backdrop">
-                            <div style={{ background: 'var(--bg-card)', borderRadius: '16px', padding: '32px', border: '1px solid var(--border)', maxWidth: '400px', width: '100%' }}>
-                                <h3 style={{ color: 'var(--text-primary)', marginBottom: '8px', fontWeight: 700, fontSize: '18px' }}>Security Verification</h3>
-                                <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '24px' }}>
-                                    An OTP has been sent to the customer&apos;s phone number <strong>{form.phone}</strong>. (Check terminal/console for mock code). Please enter it below to authorize this profile creation.
-                                </p>
-                                {devOtpCode && (
-                                    <div style={{ padding: '12px', background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.3)', borderRadius: '10px', marginBottom: '20px', textAlign: 'center' }}>
-                                        <p style={{ color: '#34d399', fontSize: '12px', fontWeight: 600 }}>🛠 DEVELOPMENT HINT</p>
-                                        <p style={{ color: 'white', fontSize: '18px', fontWeight: 800, letterSpacing: '2px', marginTop: '4px' }}>{devOtpCode}</p>
-                                    </div>
-                                )}
-                                <input
-                                    type="text"
-                                    maxLength={6}
-                                    placeholder="Enter 6-digit code"
-                                    value={otpCode}
-                                    onChange={e => setOtpCode(e.target.value)}
-                                    style={{
-                                        width: '100%', padding: '12px 16px', borderRadius: '10px',
-                                        background: 'rgba(255,255,255,0.04)', border: '1px solid var(--accent-blue)',
-                                        color: 'var(--text-primary)', fontSize: '20px', letterSpacing: '8px', textAlign: 'center',
-                                        outline: 'none', marginBottom: '8px'
-                                    }}
-                                />
-                                <div style={{ textAlign: 'center', marginBottom: '16px' }}>
-                                    <button
-                                        type="button"
-                                        onClick={handleResendOtp}
-                                        disabled={resendLoading}
-                                        style={{ background: 'none', border: 'none', color: 'var(--accent-blue)', fontSize: '12px', cursor: 'pointer', opacity: resendLoading ? 0.5 : 1 }}
-                                    >
-                                        {resendLoading ? 'Sending...' : 'Request another OTP'}
-                                    </button>
-                                </div>
-                                {error && <p style={{ color: '#ef4444', fontSize: '12px', marginBottom: '16px', textAlign: 'center' }}>⚠ {error}</p>}
-                                <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
-                                    <button type="button" onClick={() => { setOtpModalOpen(false); setError(''); }} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '13px', background: 'none' }}>
-                                        Cancel
-                                    </button>
-                                    <button type="button" onClick={verifyAndSubmit} disabled={loading} className="btn-glow" style={{ flex: 1, padding: '12px', borderRadius: '10px', border: 'none', cursor: 'pointer', color: 'white', fontSize: '13px', fontWeight: 600, opacity: loading ? 0.7 : 1 }}>
-                                        {loading ? 'Verifying...' : 'Verify OTP ✓'}
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
                 </>
             )}
         </div>

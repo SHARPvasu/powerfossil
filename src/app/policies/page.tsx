@@ -114,7 +114,7 @@ export default function PoliciesPage() {
                                 <th>Customer</th>
                                 <th>Company / Plan</th>
                                 <th>Premium</th>
-                                <th>Sum Insured</th>
+                                <th>Sum Insured / IDV</th>
                                 <th>Expiry</th>
                                 <th>Status</th>
                                 <th></th>

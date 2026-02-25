@@ -3,6 +3,14 @@ import { prisma } from '@/lib/db'
 import { getSession } from '@/lib/auth'
 import { uploadImage } from '@/lib/cloudinary'
 
+interface FamilyMemberInput {
+    name: string
+    relation: string
+    dob?: string
+    gender?: string
+    insured?: boolean
+}
+
 export async function GET(req: NextRequest) {
     const session = await getSession()
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -107,7 +115,7 @@ export async function POST(req: NextRequest) {
             agentId: session.id,
             status,
             family: {
-                create: familyMembersData.map((m: any) => ({
+                create: familyMembersData.map((m: FamilyMemberInput) => ({
                     name: m.name,
                     relation: m.relation,
                     dob: m.dob,

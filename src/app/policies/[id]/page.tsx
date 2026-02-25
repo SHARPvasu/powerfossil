@@ -167,7 +167,7 @@ export default function PolicyDetailPage() {
                                 { label: 'Plan Name', key: 'planName' },
                                 { label: 'Company', key: 'company' },
                                 { label: 'Sub Type', key: 'subType' },
-                                { label: 'Sum Insured', key: 'sumInsured', type: 'number' },
+                                { label: policy.type === 'MOTOR' ? 'IDV' : 'Sum Insured', key: 'sumInsured', type: 'number' },
                                 { label: 'Premium', key: 'premium', type: 'number' },
                             ].map(f => (
                                 <div key={f.key}>
@@ -199,14 +199,14 @@ export default function PolicyDetailPage() {
                                 { label: 'Sub Type', value: policy.subType || '—' },
                                 { label: 'Payment Mode', value: policy.paymentMode },
                                 { label: 'Premium', value: `₹${policy.premium?.toLocaleString('en-IN')}` },
-                                { label: 'Sum Insured', value: policy.sumInsured ? `₹${policy.sumInsured?.toLocaleString('en-IN')}` : '—' },
-                                { label: 'Start Date', value: policy.startDate },
-                                { label: 'End Date', value: policy.endDate },
+                                { label: policy.type === 'MOTOR' ? 'IDV' : 'Sum Insured', value: policy.sumInsured ? `₹${policy.sumInsured?.toLocaleString('en-IN')}` : '—' },
+                                { label: '📅 Policy Start Date', value: policy.startDate },
+                                { label: '🔁 Renewal / Expiry Date', value: policy.endDate },
                                 { label: 'Issue Date', value: policy.issueDate || '—' },
                             ].map(row => (
                                 <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '11px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                                     <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{row.label}</span>
-                                    <span style={{ fontSize: '13px', color: 'var(--text-primary)', fontWeight: 500 }}>{row.value}</span>
+                                    <span style={{ fontSize: '13px', color: row.label.includes('Renewal') ? (daysLeft <= 30 ? '#ef4444' : 'var(--accent-green)') : 'var(--text-primary)', fontWeight: row.label.includes('Renewal') ? 700 : 500 }}>{row.value}</span>
                                 </div>
                             ))}
                         </div>
@@ -299,22 +299,25 @@ export default function PolicyDetailPage() {
                                     <div key={doc.id} style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', padding: '16px', borderRadius: '10px', background: 'rgba(99, 102, 241, 0.05)', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                             <span style={{ fontSize: '20px' }}>📄</span>
-                                            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{doc.name}</span>
+                                            <div>
+                                                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', display: 'block' }}>{doc.name}</span>
+                                                <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Uploaded: {new Date(doc.uploadedAt).toLocaleDateString('en-IN')}</span>
+                                            </div>
                                         </div>
-                                        {userRole === 'ADMIN' ? (
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
-                                                <div style={{ display: 'flex', gap: '8px' }}>
-                                                    <a
-                                                        href={doc.url}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        onClick={async () => {
-                                                            await fetch(`/api/documents/${doc.id}/track-download`, { method: 'POST' })
-                                                        }}
-                                                        style={{ padding: '6px 12px', borderRadius: '6px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 600, textDecoration: 'none' }}
-                                                    >
-                                                        ⬇️ Download
-                                                    </a>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
+                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                                <a
+                                                    href={doc.url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    onClick={async () => {
+                                                        await fetch(`/api/documents/${doc.id}/track-download`, { method: 'POST' })
+                                                    }}
+                                                    style={{ padding: '6px 12px', borderRadius: '6px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 600, textDecoration: 'none' }}
+                                                >
+                                                    ⬇️ Download
+                                                </a>
+                                                {userRole === 'ADMIN' && (
                                                     <button
                                                         onClick={async () => {
                                                             await fetch(`/api/documents/${doc.id}/track-download`, { method: 'POST' })
@@ -324,23 +327,14 @@ export default function PolicyDetailPage() {
                                                     >
                                                         🖨️ Print
                                                     </button>
-                                                </div>
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'flex-end' }}>
-                                                    <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
-                                                        Uploaded: {new Date(doc.uploadedAt).toLocaleDateString()}
-                                                    </span>
-                                                    {doc.lastDownloadedAt && (
-                                                        <span style={{ fontSize: '10px', color: 'var(--accent-blue)' }}>
-                                                            Last Downloaded: {new Date(doc.lastDownloadedAt).toLocaleDateString()}
-                                                        </span>
-                                                    )}
-                                                </div>
+                                                )}
                                             </div>
-                                        ) : (
-                                            <div style={{ padding: '6px 12px', borderRadius: '6px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', color: '#ef4444', fontSize: '11px', fontWeight: 600 }}>
-                                                🔒 Admin Access Required
-                                            </div>
-                                        )}
+                                            {doc.lastDownloadedAt && userRole === 'ADMIN' && (
+                                                <span style={{ fontSize: '10px', color: 'var(--accent-blue)' }}>
+                                                    Last Downloaded: {new Date(doc.lastDownloadedAt).toLocaleDateString()}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                 ))}
                             </div>

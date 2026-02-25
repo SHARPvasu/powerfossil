@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 
 interface User {
     id: string
@@ -133,6 +132,7 @@ export default function ProfilePage() {
                                     <label style={labelStyle}>Aadhar Front</label>
                                     <div style={{ position: 'relative', height: '140px', borderRadius: '12px', border: '2px dashed var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
                                         {form.aadharFront ? (
+                                            // eslint-disable-next-line @next/next/no-img-element
                                             <img src={form.aadharFront} alt="Aadhar Front" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                         ) : (
                                             <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Upload Front</span>
@@ -144,6 +144,7 @@ export default function ProfilePage() {
                                     <label style={labelStyle}>Aadhar Back</label>
                                     <div style={{ position: 'relative', height: '140px', borderRadius: '12px', border: '2px dashed var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
                                         {form.aadharBack ? (
+                                            // eslint-disable-next-line @next/next/no-img-element
                                             <img src={form.aadharBack} alt="Aadhar Back" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                         ) : (
                                             <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Upload Back</span>
@@ -155,6 +156,7 @@ export default function ProfilePage() {
                                     <label style={labelStyle}>PAN Card Photo</label>
                                     <div style={{ position: 'relative', height: '140px', borderRadius: '12px', border: '2px dashed var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
                                         {form.panPhoto ? (
+                                            // eslint-disable-next-line @next/next/no-img-element
                                             <img src={form.panPhoto} alt="PAN Photo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                         ) : (
                                             <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Upload PAN</span>

@@ -32,6 +32,7 @@ model User {
   calls         CallLog[]
   notes         Note[]
   policies      Policy[]
+  claims        Claim[]
 }
 
 model Customer {
@@ -62,6 +63,15 @@ model Customer {
   panPhoto    String?
   // Pre-existing conditions
   preExisting String?  // JSON string
+  // Pipeline Stage
+  stage           String   @default("LEAD") // LEAD, PITCHED, INTERESTED, CONVERTED, LOST
+  leadSource      String?  // WALK_IN, REFERRAL, COLD_CALL, SOCIAL_MEDIA, WEBSITE, CAMP, OTHER
+  leadDate        DateTime @default(now()) // When the lead was first added
+  pitchedDate     DateTime? // When agent pitched insurance benefits
+  interestedDate  DateTime? // When customer showed interest
+  convertedDate   DateTime? // When policy was issued / customer converted
+  lostDate        DateTime? // When customer was marked lost
+  lostReason      String?   // Reason for losing
   // Status
   status      String   @default("ACTIVE")
   agentId     String
@@ -73,10 +83,12 @@ model Customer {
   family       FamilyMember[]
   notes        Note[]
   callLogs     CallLog[]
+  claims       Claim[]
   proposerFor  Policy[]   @relation("ProposerRelation")
 
   @@index([agentId])
   @@index([status])
+  @@index([stage])
 }
 
 model FamilyMember {
@@ -91,6 +103,7 @@ model FamilyMember {
   createdAt    DateTime @default(now())
 
   customer     Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  policies     Policy[]
 }
 
 model Policy {
@@ -124,11 +137,21 @@ model Policy {
   nomineeRelation String?
   // Notification
   reminderSent   Boolean  @default(false)
+  
+  // Commission
+  commissionPct   Float?   // Commission percentage e.g. 15.0
+  commissionAmt   Float?   // Calculated: premium * commissionPct / 100
+  
+  // Missing fields from UI
+  externalDocUrl String?
+  familyMemberId String?
+  
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
   customer       Customer @relation(fields: [customerId], references: [id])
   proposer       Customer? @relation("ProposerRelation", fields: [proposerId], references: [id])
+  familyMember   FamilyMember? @relation(fields: [familyMemberId], references: [id])
   agent          User     @relation(fields: [agentId], references: [id])
   documents      Document[]
 
@@ -136,6 +159,7 @@ model Policy {
   @@index([status])
   @@index([type])
   @@index([endDate])
+  @@index([familyMemberId])
 }
 
 model Document {
@@ -164,6 +188,29 @@ model CallLog {
 
   customer    Customer @relation(fields: [customerId], references: [id])
   agent       User     @relation(fields: [agentId], references: [id])
+}
+
+model Claim {
+  id          String   @id @default(cuid())
+  claimNo     String?
+  customerId  String
+  policyId    String?
+  agentId     String
+  type        String   // OWN_DAMAGE, THIRD_PARTY, HEALTH, LIFE, THEFT
+  date        String   // date of claim filing YYYY-MM-DD
+  amount      Float?
+  settled     Float?   // amount actually settled
+  status      String   @default("FILED") // FILED, UNDER_REVIEW, APPROVED, REJECTED, SETTLED
+  insurer     String?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  agent       User     @relation(fields: [agentId], references: [id])
+
+  @@index([customerId])
+  @@index([agentId])
 }
 
 model Note {
@@ -198,4 +245,38 @@ model OTPVerification {
   createdAt DateTime @default(now())
 
   @@index([target])
+}
+
+model InsuranceCompany {
+  id          String   @id @default(cuid())
+  name        String
+  logo        String?  // Cloudinary URL
+  category    String   @default("GENERAL") // HEALTH, MOTOR, LIFE, GENERAL
+  contact     String?  // Contact number
+  email       String?
+  website     String?
+  products    String?  // JSON: [{ planName, type, minPremium, commissionPct }]
+  notes       String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model WhatsAppSettings {
+  id            String   @id @default(uuid())
+  phoneNumberId String   // Meta Phone Number ID
+  accessToken   String   // Meta Graph API Token
+  isActive      Boolean  @default(true)
+  updatedAt     DateTime @updatedAt
+}
+
+model WhatsAppLog {
+  id           String   @id @default(uuid())
+  customerId   String
+  customerName String
+  phone        String
+  messageType  String   // 'BIRTHDAY', 'RENEWAL_30', 'RENEWAL_15', 'RENEWAL_3'
+  status       String   // 'SUCCESS', 'FAILED'
+  errorMessage String?
+  sentAt       DateTime @default(now())
 }

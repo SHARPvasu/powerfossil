@@ -18,6 +18,18 @@ const navItems = [
         ),
     },
     {
+        label: 'Leads',
+        href: '/leads',
+        icon: (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 22h14a2 2 0 0 0 2-2V7l-5-5H6a2 2 0 0 0-2 2v4" />
+                <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+                <path d="M3 15h6" />
+                <path d="M3 18h6" />
+            </svg>
+        ),
+    },
+    {
         label: 'Customers',
         href: '/customers',
         icon: (
@@ -81,6 +93,17 @@ const adminItems = [
         ),
     },
     {
+        label: 'Companies',
+        href: '/companies',
+        icon: (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                <line x1="3" y1="9" x2="21" y2="9" />
+                <line x1="9" y1="21" x2="9" y2="9" />
+            </svg>
+        ),
+    },
+    {
         label: 'Approvals',
         href: '/admin/approvals',
         icon: (
@@ -99,6 +122,25 @@ const adminItems = [
                 <line x1="12" y1="20" x2="12" y2="4" />
                 <line x1="6" y1="20" x2="6" y2="14" />
                 <line x1="2" y1="20" x2="22" y2="20" />
+            </svg>
+        ),
+    },
+    {
+        label: 'WhatsApp Bot',
+        href: '/settings/whatsapp',
+        icon: (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#25D366" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+            </svg>
+        ),
+    },
+    {
+        label: 'Message Logs',
+        href: '/whatsapp-logs',
+        icon: (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16c0 1.1.9 2 2 2h12a2 2 0 0 0 2-2V8l-6-6z" />
+                <path d="M14 3v5h5M16 13H8M16 17H8M10 9H8" />
             </svg>
         ),
     },

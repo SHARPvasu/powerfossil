@@ -50,8 +50,15 @@ export default function CustomerDetailPage() {
     const [showPolicyForm, setShowPolicyForm] = useState(false)
     const [policyForm, setPolicyForm] = useState({
         policyNumber: '', type: 'HEALTH', subType: 'INDIVIDUAL', company: '', planName: '',
-        sumInsured: '', premium: '', startDate: '', endDate: '', status: 'ACTIVE', externalDocUrl: '', familyMemberId: ''
+        sumInsured: '', premium: '', startDate: '', endDate: '', status: 'ACTIVE',
+        externalDocUrl: '', familyMemberId: '',
+        vehicleNo: '', vehicleModel: '', vehicleYear: '',
+        nominee: '', nomineeRelation: ''
     })
+
+    // KYC Lightbox
+    const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
+    const [lightboxTitle, setLightboxTitle] = useState('')
 
     useEffect(() => {
         // Fetch session first
@@ -140,10 +147,13 @@ export default function CustomerDetailPage() {
     }
 
     async function addPolicy() {
+        // For THIRD_PARTY motor: sum insured is not applicable
+        const isThirdParty = policyForm.type === 'MOTOR' && policyForm.subType === 'THIRD_PARTY'
         const payload = {
             ...policyForm,
             customerId: id,
-            sumInsured: policyForm.sumInsured ? parseFloat(policyForm.sumInsured) : null,
+            familyMemberId: policyForm.familyMemberId || null,
+            sumInsured: isThirdParty ? null : (policyForm.sumInsured ? parseFloat(policyForm.sumInsured) : null),
             premium: policyForm.premium ? parseFloat(policyForm.premium) : null,
         }
 
@@ -160,18 +170,20 @@ export default function CustomerDetailPage() {
                 setShowPolicyForm(false)
                 setPolicyForm({
                     policyNumber: '', type: 'HEALTH', subType: 'INDIVIDUAL', company: '', planName: '',
-                    sumInsured: '', premium: '', startDate: '', endDate: '', status: 'ACTIVE', externalDocUrl: '', familyMemberId: ''
+                    sumInsured: '', premium: '', startDate: '', endDate: '', status: 'ACTIVE',
+                    externalDocUrl: '', familyMemberId: '',
+                    vehicleNo: '', vehicleModel: '', vehicleYear: '',
+                    nominee: '', nomineeRelation: ''
                 })
             } else {
                 let errorMsg = 'Failed to save policy'
                 try {
                     const errorData = await res.json()
                     if (errorData.error) errorMsg = errorData.error
-                } catch { } // If not json, fall back to default msg
-
+                } catch { }
                 alert(errorMsg)
             }
-        } catch (err) {
+        } catch {
             alert('Network error occurred while saving policy.')
         }
     }
@@ -472,8 +484,11 @@ export default function CustomerDetailPage() {
                             <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '14px', padding: '20px' }}>
                                 <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '12px' }}>Live Photo</h3>
                                 {userRole === 'ADMIN' ? (
-                                    /* eslint-disable-next-line @next/next/no-img-element */
-                                    <img src={customer.livePhoto} alt="Live" style={{ width: 100, height: 120, objectFit: 'cover', borderRadius: '10px', border: '2px solid var(--border)' }} />
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-start' }}>
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img src={customer.livePhoto} alt="Live" style={{ width: 100, height: 120, objectFit: 'cover', borderRadius: '10px', border: '2px solid var(--border)' }} />
+                                        <a href={customer.livePhoto} target="_blank" rel="noopener noreferrer" download style={{ padding: '4px 12px', borderRadius: '6px', background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.3)', color: 'var(--accent-blue)', fontSize: '11px', fontWeight: 600, textDecoration: 'none', textAlign: 'center', width: '100px' }}>⬇ Download</a>
+                                    </div>
                                 ) : (
                                     <div style={{ width: 100, height: 120, borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)' }}>
                                         <div style={{ textAlign: 'center' }}>
@@ -493,7 +508,6 @@ export default function CustomerDetailPage() {
                 <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
                         <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)' }}>Policies ({customer.policies.length})</h3>
-                        {userRole !== 'AUDITOR' && <button onClick={() => setShowPolicyForm(true)} className="btn-glow" style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', cursor: 'pointer', color: 'white', fontSize: '12px', fontWeight: 600 }}>+ Add Policy</button>}
                     </div>
                     {customer.policies.length === 0 ? (
                         <div style={{ padding: '40px', textAlign: 'center', background: 'var(--bg-card)', borderRadius: '14px', border: '1px solid var(--border)' }}>
@@ -520,8 +534,8 @@ export default function CustomerDetailPage() {
                                                 <p style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>₹{pol.premium?.toLocaleString('en-IN')}</p>
                                             </div>
                                             <div style={{ textAlign: 'center' }}>
-                                                <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Sum Insured</p>
-                                                <p style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>₹{pol.sumInsured?.toLocaleString('en-IN') || '—'}</p>
+                                                <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{pol.type === 'MOTOR' ? 'IDV' : 'Sum Insured'}</p>
+                                                <p style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>{pol.sumInsured ? `₹${pol.sumInsured.toLocaleString('en-IN')}` : '—'}</p>
                                             </div>
                                             <div style={{ textAlign: 'center' }}>
                                                 <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Expires</p>
@@ -536,76 +550,6 @@ export default function CustomerDetailPage() {
                         </div>
                     )}
 
-                    {showPolicyForm && (
-                        <div className="modal-backdrop" onClick={() => setShowPolicyForm(false)}>
-                            <div style={{ background: 'var(--bg-card)', borderRadius: '16px', padding: '28px', border: '1px solid var(--border)', width: '500px', maxWidth: '90vw', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
-                                <h3 style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: '20px', fontSize: '16px' }}>Add New Policy</h3>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                                    <div style={{ gridColumn: '1 / -1' }}>
-                                        <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Policy Number *</label>
-                                        <input type="text" style={inputCls} placeholder="POL-123456789" value={policyForm.policyNumber} onChange={e => setPolicyForm(p => ({ ...p, policyNumber: e.target.value }))} required />
-                                    </div>
-                                    <div style={{ gridColumn: '1 / -1' }}>
-                                        <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Assign To (Customer or Family Member)</label>
-                                        <select style={inputCls} value={policyForm.familyMemberId} onChange={e => setPolicyForm(p => ({ ...p, familyMemberId: e.target.value }))}>
-                                            <option value="">{customer.firstName} {customer.lastName} (Primary)</option>
-                                            {customer.family.map(f => (
-                                                <option key={f.id} value={f.id}>{f.name} ({f.relation})</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Insurance Type *</label>
-                                        <select style={inputCls} value={policyForm.type} onChange={e => setPolicyForm(p => ({ ...p, type: e.target.value }))}>
-                                            <option value="HEALTH">Health</option>
-                                            <option value="MOTOR">Motor</option>
-                                            <option value="LIFE">Life</option>
-                                            <option value="TERM">Term</option>
-                                            <option value="TRAVEL">Travel</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Sub-Type</label>
-                                        <select style={inputCls} value={policyForm.subType} onChange={e => setPolicyForm(p => ({ ...p, subType: e.target.value }))}>
-                                            {policyForm.type === 'HEALTH' && <><option value="INDIVIDUAL">Individual</option><option value="FAMILY_FLOATER">Family Floater</option><option value="GROUP">Group</option></>}
-                                            {policyForm.type === 'MOTOR' && <><option value="COMPREHENSIVE">Comprehensive</option><option value="THIRD_PARTY">Third Party</option></>}
-                                            {policyForm.type === 'LIFE' && <><option value="ULIP">ULIP</option><option value="ENDOWMENT">Endowment</option></>}
-                                            {policyForm.type === 'TERM' && <><option value="PURE_TERM">Pure Term</option><option value="RETURN_OF_PREMIUM">Return of Premium</option></>}
-                                            {policyForm.type === 'TRAVEL' && <><option value="DOMESTIC">Domestic</option><option value="INTERNATIONAL">International</option></>}
-                                        </select>
-                                    </div>
-                                    <div style={{ gridColumn: '1 / -1' }}>
-                                        <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Company</label>
-                                        <input type="text" style={inputCls} placeholder="e.g. LIC, Star Health" value={policyForm.company} onChange={e => setPolicyForm(p => ({ ...p, company: e.target.value }))} required />
-                                    </div>
-                                    <div style={{ gridColumn: '1 / -1' }}>
-                                        <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Plan Name</label>
-                                        <input type="text" style={inputCls} placeholder="e.g. Jeevan Anand" value={policyForm.planName} onChange={e => setPolicyForm(p => ({ ...p, planName: e.target.value }))} required />
-                                    </div>
-                                    <div>
-                                        <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Sum Insured (₹)</label>
-                                        <input type="number" style={inputCls} placeholder="500000" value={policyForm.sumInsured} onChange={e => setPolicyForm(p => ({ ...p, sumInsured: e.target.value }))} required />
-                                    </div>
-                                    <div>
-                                        <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Premium (₹)</label>
-                                        <input type="number" style={inputCls} placeholder="12500" value={policyForm.premium} onChange={e => setPolicyForm(p => ({ ...p, premium: e.target.value }))} required />
-                                    </div>
-                                    <div>
-                                        <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Start Date</label>
-                                        <input type="date" style={inputCls} value={policyForm.startDate} onChange={e => setPolicyForm(p => ({ ...p, startDate: e.target.value }))} required />
-                                    </div>
-                                    <div>
-                                        <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>End Date (Expiry)</label>
-                                        <input type="date" style={inputCls} value={policyForm.endDate} onChange={e => setPolicyForm(p => ({ ...p, endDate: e.target.value }))} required />
-                                    </div>
-                                </div>
-                                <div style={{ display: 'flex', gap: '10px', marginTop: '24px', justifyContent: 'flex-end' }}>
-                                    <button onClick={() => setShowPolicyForm(false)} style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--border)', cursor: 'pointer', color: 'var(--text-muted)', background: 'none', fontSize: '12px' }}>Cancel</button>
-                                    <button onClick={addPolicy} className="btn-glow" style={{ padding: '8px 18px', borderRadius: '8px', border: 'none', cursor: 'pointer', color: 'white', fontSize: '12px', fontWeight: 600 }}>Save Policy</button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
                 </div>
             )}
 
@@ -852,19 +796,26 @@ export default function CustomerDetailPage() {
                                 <div key={doc.title} style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', borderRadius: '12px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)' }}>
                                     <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>{doc.title}</span>
                                     {doc.url ? (
-                                        userRole === 'ADMIN' ? (
-                                            <div style={{ width: '100%', height: '140px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                                        <>
+                                            <div
+                                                onClick={() => { setLightboxSrc(doc.url!); setLightboxTitle(doc.title) }}
+                                                style={{ width: '100%', height: '140px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border)', cursor: 'zoom-in', position: 'relative' }}
+                                            >
                                                 {/* eslint-disable-next-line @next/next/no-img-element */}
                                                 <img src={doc.url} alt={doc.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                            </div>
-                                        ) : (
-                                            <div style={{ width: '100%', height: '140px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)' }}>
-                                                <div style={{ textAlign: 'center' }}>
-                                                    <div style={{ fontSize: '24px', marginBottom: '8px' }}>✔</div>
-                                                    <span style={{ fontSize: '12px', color: 'var(--accent-green)', fontWeight: 600 }}>Uploaded Safely</span>
+                                                <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s' }}
+                                                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,0,0,0.3)')}
+                                                    onMouseLeave={e => (e.currentTarget.style.background = 'rgba(0,0,0,0)')}>
+                                                    <span style={{ color: 'white', fontSize: '18px', opacity: 0 }} className="zoom-icon">🔍</span>
                                                 </div>
                                             </div>
-                                        )
+                                            <div style={{ display: 'flex', gap: '6px' }}>
+                                                <button onClick={() => { setLightboxSrc(doc.url!); setLightboxTitle(doc.title) }} style={{ flex: 1, padding: '5px', borderRadius: '6px', border: '1px solid var(--border)', background: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '11px', fontWeight: 600 }}>🔍 Zoom</button>
+                                                {userRole === 'ADMIN' && (
+                                                    <a href={doc.url} target="_blank" rel="noopener noreferrer" download style={{ flex: 1, padding: '5px', borderRadius: '6px', border: '1px solid var(--border)', background: 'none', cursor: 'pointer', color: 'var(--accent-blue)', fontSize: '11px', fontWeight: 600, textDecoration: 'none', textAlign: 'center' }}>⬇ Download</a>
+                                                )}
+                                            </div>
+                                        </>
                                     ) : (
                                         <div style={{ width: '100%', height: '140px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.02)', border: '1px dashed var(--border)' }}>
                                             <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Not uploaded</span>
@@ -872,6 +823,137 @@ export default function CustomerDetailPage() {
                                     )}
                                 </div>
                             ))}
+                        </div>
+
+                        {/* KYC Lightbox */}
+                        {lightboxSrc && (
+                            <div onClick={() => setLightboxSrc(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'zoom-out', flexDirection: 'column', gap: '16px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', maxWidth: '800px', padding: '0 16px' }}>
+                                    <span style={{ color: 'white', fontSize: '14px', fontWeight: 600 }}>{lightboxTitle}</span>
+                                    <div style={{ display: 'flex', gap: '10px' }}>
+                                        {userRole === 'ADMIN' && (
+                                            <a href={lightboxSrc} target="_blank" rel="noopener noreferrer" download onClick={e => e.stopPropagation()} style={{ padding: '8px 16px', borderRadius: '8px', background: 'rgba(99,102,241,0.8)', color: 'white', fontSize: '12px', fontWeight: 600, textDecoration: 'none' }}>⬇️ Download</a>
+                                        )}
+                                        <button onClick={() => setLightboxSrc(null)} style={{ padding: '8px 16px', borderRadius: '8px', background: 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer', color: 'white', fontSize: '12px' }}>✕ Close</button>
+                                    </div>
+                                </div>
+                                <div onClick={e => e.stopPropagation()} style={{ maxWidth: '90vw', maxHeight: '80vh', borderRadius: '12px', overflow: 'hidden' }}>
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src={lightboxSrc} alt={lightboxTitle} style={{ maxWidth: '90vw', maxHeight: '80vh', objectFit: 'contain', borderRadius: '12px', display: 'block' }} />
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+            {showPolicyForm && (
+                <div className="modal-backdrop" onClick={() => setShowPolicyForm(false)}>
+                    <div className="animate-fade-in" style={{ background: 'var(--bg-card)', borderRadius: '16px', padding: '32px', border: '1px solid var(--border)', width: '800px', maxWidth: '95vw', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 10px 40px rgba(0,0,0,0.6)' }} onClick={e => e.stopPropagation()}>
+                        <h3 style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: '24px', fontSize: '18px' }}>Add New Policy</h3>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                            <div style={{ gridColumn: '1 / -1' }}>
+                                <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Policy Number *</label>
+                                <input type="text" style={inputCls} placeholder="POL-123456789" value={policyForm.policyNumber} onChange={e => setPolicyForm(p => ({ ...p, policyNumber: e.target.value }))} required />
+                            </div>
+                            <div style={{ gridColumn: '1 / -1' }}>
+                                <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Assign To</label>
+                                <select style={inputCls} value={policyForm.familyMemberId} onChange={e => setPolicyForm(p => ({ ...p, familyMemberId: e.target.value }))}>
+                                    <option value="">{customer.firstName} {customer.lastName} (Primary)</option>
+                                    {customer.family.map(f => (
+                                        <option key={f.id} value={f.id}>{f.name} ({f.relation})</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Insurance Type *</label>
+                                <select style={inputCls} value={policyForm.type} onChange={e => setPolicyForm(p => ({ ...p, type: e.target.value, subType: '' }))}>
+                                    <option value="HEALTH">🏥 Health</option>
+                                    <option value="MOTOR">🚗 Motor</option>
+                                    <option value="LIFE">❤️ Life</option>
+                                    <option value="TERM">📋 Term</option>
+                                    <option value="TRAVEL">✈️ Travel</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Sub-Type</label>
+                                <select style={inputCls} value={policyForm.subType} onChange={e => setPolicyForm(p => ({ ...p, subType: e.target.value }))}>
+                                    {policyForm.type === 'HEALTH' && <><option value="INDIVIDUAL">Individual</option><option value="FAMILY_FLOATER">Family Floater</option><option value="GROUP">Group</option></>}
+                                    {policyForm.type === 'MOTOR' && <><option value="COMPREHENSIVE">Comprehensive (Full Cover)</option><option value="THIRD_PARTY">Third Party (No Sum Insured)</option></>}
+                                    {policyForm.type === 'LIFE' && <><option value="ULIP">ULIP</option><option value="ENDOWMENT">Endowment</option></>}
+                                    {policyForm.type === 'TERM' && <><option value="PURE_TERM">Pure Term</option><option value="RETURN_OF_PREMIUM">Return of Premium</option></>}
+                                    {policyForm.type === 'TRAVEL' && <><option value="DOMESTIC">Domestic</option><option value="INTERNATIONAL">International</option></>}
+                                </select>
+                            </div>
+                            <div style={{ gridColumn: '1 / -1' }}>
+                                <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Company *</label>
+                                <input type="text" style={inputCls} placeholder="e.g. New India, Star Health" value={policyForm.company} onChange={e => setPolicyForm(p => ({ ...p, company: e.target.value }))} required />
+                            </div>
+                            <div style={{ gridColumn: '1 / -1' }}>
+                                <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Plan Name *</label>
+                                <input type="text" style={inputCls} placeholder="e.g. Jeevan Anand" value={policyForm.planName} onChange={e => setPolicyForm(p => ({ ...p, planName: e.target.value }))} required />
+                            </div>
+                            {/* Sum insured hidden for Third Party */}
+                            {!(policyForm.type === 'MOTOR' && policyForm.subType === 'THIRD_PARTY') && (
+                                <div>
+                                    <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
+                                        {policyForm.type === 'MOTOR' ? 'IDV — Insured Declared Value (₹)' : 'Sum Insured (₹)'}
+                                    </label>
+                                    <input type="number" style={inputCls} placeholder={policyForm.type === 'MOTOR' ? '250000' : '500000'} value={policyForm.sumInsured} onChange={e => setPolicyForm(p => ({ ...p, sumInsured: e.target.value }))} />
+                                </div>
+                            )}
+                            <div>
+                                <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Premium (₹) *</label>
+                                <input type="number" style={inputCls} placeholder="12500" value={policyForm.premium} onChange={e => setPolicyForm(p => ({ ...p, premium: e.target.value }))} required />
+                            </div>
+                            <div>
+                                <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Start Date *</label>
+                                <input type="date" style={inputCls} value={policyForm.startDate} onChange={e => setPolicyForm(p => ({ ...p, startDate: e.target.value }))} required />
+                            </div>
+                            <div>
+                                <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Expiry / Renewal Date *</label>
+                                <input type="date" style={inputCls} value={policyForm.endDate} onChange={e => setPolicyForm(p => ({ ...p, endDate: e.target.value }))} required />
+                            </div>
+
+                            {/* Motor-specific fields */}
+                            {policyForm.type === 'MOTOR' && (
+                                <>
+                                    <div style={{ gridColumn: '1 / -1', marginTop: '8px', padding: '12px', background: 'rgba(59,130,246,0.06)', borderRadius: '10px', border: '1px solid rgba(59,130,246,0.15)' }}>
+                                        <p style={{ fontSize: '12px', fontWeight: 700, color: '#3b82f6', marginBottom: '12px' }}>🚗 Vehicle Details</p>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                            <div style={{ gridColumn: '1 / -1' }}>
+                                                <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Vehicle Number *</label>
+                                                <input type="text" style={inputCls} placeholder="MH12AB1234" value={policyForm.vehicleNo} onChange={e => setPolicyForm(p => ({ ...p, vehicleNo: e.target.value.toUpperCase() }))} />
+                                            </div>
+                                            <div>
+                                                <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Vehicle Model</label>
+                                                <input type="text" style={inputCls} placeholder="Honda City" value={policyForm.vehicleModel} onChange={e => setPolicyForm(p => ({ ...p, vehicleModel: e.target.value }))} />
+                                            </div>
+                                            <div>
+                                                <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Vehicle Year</label>
+                                                <input type="text" style={inputCls} placeholder="2022" value={policyForm.vehicleYear} onChange={e => setPolicyForm(p => ({ ...p, vehicleYear: e.target.value }))} maxLength={4} />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+
+                            {/* Life/Term specific */}
+                            {(policyForm.type === 'LIFE' || policyForm.type === 'TERM') && (
+                                <>
+                                    <div>
+                                        <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Nominee Name</label>
+                                        <input type="text" style={inputCls} placeholder="Nominee Name" value={policyForm.nominee} onChange={e => setPolicyForm(p => ({ ...p, nominee: e.target.value }))} />
+                                    </div>
+                                    <div>
+                                        <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Nominee Relation</label>
+                                        <input type="text" style={inputCls} placeholder="Spouse / Son" value={policyForm.nomineeRelation} onChange={e => setPolicyForm(p => ({ ...p, nomineeRelation: e.target.value }))} />
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                        <div style={{ display: 'flex', gap: '10px', marginTop: '24px', justifyContent: 'flex-end' }}>
+                            <button onClick={() => setShowPolicyForm(false)} style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--border)', cursor: 'pointer', color: 'var(--text-muted)', background: 'none', fontSize: '12px' }}>Cancel</button>
+                            <button onClick={addPolicy} className="btn-glow" style={{ padding: '8px 18px', borderRadius: '8px', border: 'none', cursor: 'pointer', color: 'white', fontSize: '12px', fontWeight: 600 }}>💾 Save Policy</button>
                         </div>
                     </div>
                 </div>
