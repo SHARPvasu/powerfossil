@@ -146,21 +146,33 @@ export default function CustomerDetailPage() {
             sumInsured: policyForm.sumInsured ? parseFloat(policyForm.sumInsured) : null,
             premium: policyForm.premium ? parseFloat(policyForm.premium) : null,
         }
-        const res = await fetch('/api/policies', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-        })
-        const d = await res.json()
-        if (res.ok) {
-            setCustomer(prev => prev ? { ...prev, policies: [d.policy, ...prev.policies] } : prev)
-            setShowPolicyForm(false)
-            setPolicyForm({
-                policyNumber: '', type: 'HEALTH', subType: 'INDIVIDUAL', company: '', planName: '',
-                sumInsured: '', premium: '', startDate: '', endDate: '', status: 'ACTIVE', externalDocUrl: '', familyMemberId: ''
+
+        try {
+            const res = await fetch('/api/policies', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
             })
-        } else {
-            alert('Failed to save policy: ' + d.error)
+
+            if (res.ok) {
+                const d = await res.json()
+                setCustomer(prev => prev ? { ...prev, policies: [d.policy, ...(prev.policies || [])] } : prev)
+                setShowPolicyForm(false)
+                setPolicyForm({
+                    policyNumber: '', type: 'HEALTH', subType: 'INDIVIDUAL', company: '', planName: '',
+                    sumInsured: '', premium: '', startDate: '', endDate: '', status: 'ACTIVE', externalDocUrl: '', familyMemberId: ''
+                })
+            } else {
+                let errorMsg = 'Failed to save policy'
+                try {
+                    const errorData = await res.json()
+                    if (errorData.error) errorMsg = errorData.error
+                } catch { } // If not json, fall back to default msg
+
+                alert(errorMsg)
+            }
+        } catch (err) {
+            alert('Network error occurred while saving policy.')
         }
     }
 
@@ -284,8 +296,7 @@ export default function CustomerDetailPage() {
             }
         } catch { }
     }
-    const activePolicies = customer.policies.filter(p => p.status === 'ACTIVE')
-
+    const activePolicies = (customer.policies || []).filter(p => p.status === 'ACTIVE')
     const inputCls: React.CSSProperties = {
         background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', color: 'var(--text-primary)',
         borderRadius: '8px', padding: '8px 12px', fontSize: '13px', outline: 'none', width: '100%',
